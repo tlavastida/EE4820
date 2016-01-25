@@ -1,0 +1,4 @@
+Place code intended to be used on the arduino in this directory.
+    -Create a new directory for each separate module/unit.
+    -Put header files (.h extension) in the same directory as corresponding source code.
+

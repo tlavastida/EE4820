@@ -1,0 +1,3 @@
+Place code intended to be used on the raspberry pi in this directory.
+    -Put header files (.h extension) in the include directory.
+    -Create a new directory for each separate module/unit.
