@@ -18,7 +18,7 @@ if __name__ == '__main__':
     limit = 150
     num_tests = 100
 
-    com = robot_serial.RobotSerial("/dev/ttyACM0",2000000,2)
+    com = robot_serial.RobotSerial("/dev/ttyACM0",250000,2)
     sleep(0.500)
 
     print(com.name())

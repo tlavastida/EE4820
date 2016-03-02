@@ -6,7 +6,7 @@ import serial
 from time import sleep
 
 if __name__ == '__main__':
-    ser = serial.Serial('/dev/ttyACM0',2000000, timeout = 1)
+    ser = serial.Serial('/dev/ttyACM0',250000, timeout = 1)
     print(ser.name )
     print('\n\n')
 
