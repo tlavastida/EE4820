@@ -13,114 +13,124 @@
 /************************************************************************************
 *  References: 
 * 1) http://learn.parallax.com/KickStart/28015 for Ultrasonic example code
-* 2) http://www.instructables.com/id/Get-started-with-distance-sensors-and-Arduino/?ALLSTEPS for example code for IR/US
-* 3) http://www.robotshop.com/blog/en/arduino-5-minute-tutorials-lesson-4-ir-distance-sensor-push-button-2-3637 for IR example code
+* 2) http://www.instructables.com/id/Get-started-with-Distance-sensors-and-Arduino/?ALLSTEPS for example code for IR/US
+* 3) http://www.robotshop.com/blog/en/arduino-5-minute-tutorials-lesson-4-ir-Distance-sensor-push-button-2-3637 for IR example code
 * 4) http://www.robotoid.com/appnotes/circuits-quad-encoding.html
 * 5) http://learn.robotgeek.com/getting-started/30-dev-kits/55-robotgeek-gripper-getting-started-guide.html
 * 6) http://learn.trossenrobotics.com/30-robotgeek-getting-started-guides/dev-kits/55-robotgeek-gripper-kit-tips for gripper sample code
 * 7) https://gist.github.com/philippbosch/5395696 for sprintf example code
 ************************************************************************************/
+/*****************************************************************************************
+*	Notes:
+*	Constants are all capital
+*	Global volatile variables start with a capital letter and camelcase for the remaining
+*	Local variables are camelcase
+*****************************************************************************************/
 #include <Servo.h>   //include the servo library to control the RobotGeek Servos
 #include "DualMC33926MotorShield.h"
 
-DualMC33926MotorShield md;
+DualMC33926MotorShield mtr_ctrl;
 
+//for instructions from Pi
 const char GO = 'G';
 const char TURN = 'T';
 const char PICKUP = 'P';
 const char DROPOFF = 'D';
 const char RECOVER = 'R';
 
-
-#define STOP 0  
-#define SLOW 40     
-#define SPEED 80
-
-#define MICRO_SERVOPIN 9    //pin that the micro servo will be attached to
-#define LARGE_SERVOPIN 11   //pin that the large servo will be attached to
+//Motor speeds
+const int STOP = 0;  
+const int SLOW = 40;     
+const int SPEED = 80;
 
 Servo microServo;   //create an servo object for the 9g FT-FS90MG micro servo
 Servo largeServo;   //create an servo object for the RobotGeek 180 degree servo
 
-//PIN ASSIGNMENTS
+//*********************************************************************************
+//								PIN ASSIGNMENTS
+//*********************************************************************************
+const int MICRO_SERVOPIN = 9;    //pin that the micro servo will be attached to
+const int LARGE_SERVOPIN = 11;   //pin that the large servo will be attached to
+
 //declare pins for Infrared sensors
-const int analogPinIR_L = A1;     
-const int analogPinIR_R = A2;    
+const int ANALOG_PIN_IR_L = A1;     
+const int ANALOG_PIN_IR_R = A2;    
 
 //declare pins for Ultrasonic sensors
-const int digPinUS_L = 24;
-const int digPinUS_R = 26;
-const int digPinUS_F = 28;
+const int DIG_PIN_US_L = 24;
+const int DIG_PIN_US_R = 26;
+const int DIG_PIN_US_F = 28;
 
 //declare pins for LS7184 chips
-const int clk1 = 25;          		//interrupt will be attached for this (chip1)
-const int direction1 = 27;        	//requires digital pin (chip1)
-const int clk2 = 29;          		//interrupt will be attached for this (chip2)
-const int direction2 = 31;        	//requires digital pin (chip2)
+const int DIG_PIN_CLK_1 = 25;          		//interrupt will be attached for this (chip1)
+const int DIG_PIN_DIR_1 = 27;        	//requires digital pin (chip1)
+const int DIG_PIN_CLK_2 = 29;          		//interrupt will be attached for this (chip2)
+const int DIG_PIN_DIR_2 = 31;        	//requires digital pin (chip2)
+//*********************************************************************************
 
 //Time delays for gripper movement
-const int timeDelay = 20;
-const int microDelay = 5;
+const int TIME_DELAY = 20;
+const int MICRO_DELAY = 5;
 
 //Angle values for gripper
-const int gripOpen = 0;
-const int gripClosed = 130;
-const int gripGrab = 84;
+const int GRIP_OPEN = 0;
+const int GRIP_CLOSED = 130;
+const int GRIP_GRAB = 84;
 
 //Angle values for wrist
-const int wristDown = 150;
-const int wristUp = 0;
-const int wristLevel = 90;
-const int wristPickup = 10;
-const int wristLower = 110;
+//const int wristDown = 150;
+const int WRIST_UP = 0;
+const int WRIST_LEVEL = 90;
+const int WRIST_PICKUP = 10;
+const int WRIST_LOWER = 110;
 
-//distance Thresholds
-const int pickupVictim = 67;                			//pickup victim at this distance (mm)
-const int victimAhead = 110;                			//victim is ahead of robot, start aligning (mm)
-const int pickupTolerance = 2;              			//use threshold - measurement and check tolerance (mm)
-const int dangerZone = pickupVictim-pickupTolerance;    //Stop Immediately
+//Distance Thresholds
+const int PICKUP_VICTIM_THRESHOLD = 67;                				//pickup victim at this Distance (mm)
+const int VICTIM_AHEAD_THRESHOLD = 110;                				//victim is ahead of robot, start aligning (mm)
+const int PICKUP_TOLERANCE = 2;              						//use threshold - measurement and check tolerance (mm)
+const int DANGER_ZONE = PICKUP_VICTIM_THRESHOLD-PICKUP_TOLERANCE;   //Stop Immediately
 
 //Variables for IR sensors
 long analogValue,distanceValue;
-volatile long distanceIR_L,distanceIR_R;  
-int threshold = 5;                    			//used to check if IR sensors approx. equal (mm)
+volatile long Distance_IR_L,Distance_IR_R;  
+const int THRESHOLD = 5;                    						//used to check if IR sensors approx. equal (mm)
 
 //Variables for US sensors
 long pulseWidth,cm; 
-volatile long distanceUS_L,distanceUS_R,distanceUS_F; 
+volatile long Distance_US_L,Distance_US_R,Distance_US_F; 
 
 //Variables for LS7184 chips
-volatile long count1 = 0;                		//tick count chip 1
-volatile long count2 = 0;                		//tick count chip 2
+volatile long Count1 = 0;                							//tick count chip 1
+volatile long Count2 = 0;                							//tick count chip 2
 
 //Variables for encoders 
-const int convFactor = 13;              		//counts per cm, 13 for cm 33 for in at 1x resolution
-const int turnTickCount = 239;          		//number of ticks for a turn
+const int CONV_FACTOR = 13;              							//counts per cm, 13 for cm 33 for in at 1x resolution
+const int TURN_TICK_COUNT = 239;          							//number of ticks for a turn
 
 //Variables used in main loop
-volatile long turnNum;
-volatile char turnDir;
-volatile long tickGoal;
-volatile long distance;
+volatile long TurnNum;
+volatile char TurnDir;
+volatile long TickGoal;
+volatile long Distance;
 
-volatile bool targetAcquired = false;     		//if target is in tow or not
+volatile bool TargetAcquired = false;     		//if target is in tow or not
 
 
 //setup servo objects and set initial position
 void setup()
 { 
   microServo.attach(MICRO_SERVOPIN);
-  microServo.write(gripClosed);    		// sets the servo position to 150 degress, positioning the servo for the gripper closed
+  microServo.write(GRIP_CLOSED);    		// sets the gripper servo position to closed 
   largeServo.attach(LARGE_SERVOPIN);
-  largeServo.write(wristPickup);    	// sets the servo position to 90 degress, centered
-  pinMode(clk1,INPUT);
-  pinMode(direction1,INPUT);
-  attachInterrupt(digitalPinToInterrupt(clk1),encoderInterrupt1,RISING);
-  pinMode(clk2,INPUT);
-  pinMode(direction2,INPUT);
-  attachInterrupt(digitalPinToInterrupt(clk2),encoderInterrupt2,RISING);
+  largeServo.write(WRIST_PICKUP);    	// sets the wrist servo position to travel position
+  pinMode(DIG_PIN_CLK_1,INPUT);
+  pinMode(DIG_PIN_DIR_1,INPUT);
+  attachInterrupt(digitalPinToInterrupt(DIG_PIN_CLK_1),encoderInterrupt1,RISING);
+  pinMode(DIG_PIN_CLK_2,INPUT);
+  pinMode(DIG_PIN_DIR_2,INPUT);
+  attachInterrupt(digitalPinToInterrupt(DIG_PIN_CLK_2),encoderInterrupt2,RISING);
   Serial.begin(9600);
-  md.init();
+  mtr_ctrl.init();
 }
  
 //repeat test process 
@@ -133,14 +143,14 @@ void loop()
 		instruction = Serial.read();
 		switch (instruction) {
 			case GO:
-				distance = Serial.parseInt();
-				tickGoal = convFactor * distance;
-				travelDistance(tickGoal);
+				Distance = Serial.parseInt();
+				TickGoal = CONV_FACTOR * Distance;
+				travelDistance(TickGoal);
 			break;
 			case TURN:
-				turnNum = Serial.parseInt();
-				turnDir = Serial.read();
-				turn(turnNum,turnDir);
+				TurnNum = Serial.parseInt();
+				TurnDir = Serial.read();
+				turn(TurnNum,TurnDir);
 			break;
 			case PICKUP:
 				acquireTarget();
@@ -169,40 +179,40 @@ long checkIR (int pinNumIR)
 void grabVictim()
 {
   //Pickup victim
-  microServo.write(gripOpen);           		//set gripper to fully open
-  delay(timeDelay);                     		//wait 
-  largeServo.write(wristLower);         		//Lower wrist to grab victim
-  delay(timeDelay);                     		//wait 
-  microServo.write(gripGrab);           		//set gripper to grab victim
-  delay(timeDelay);                     		//wait 
-  for (int i=wristLower;i>wristPickup;i=i-1)
+  microServo.write(GRIP_OPEN);           		//set gripper to fully open
+  delay(TIME_DELAY);                     		//wait 
+  largeServo.write(WRIST_LOWER);         		//Lower wrist to grab victim
+  delay(TIME_DELAY);                     		//wait 
+  microServo.write(GRIP_GRAB);           		//set gripper to grab victim
+  delay(TIME_DELAY);                     		//wait 
+  for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
   {
     largeServo.write(i);              			//Pickup victim
-    delay(microDelay);
+    delay(MICRO_DELAY);
   }
 } 
 
 void dropVictim()
 {
   //Drop victim
-  for (int i=wristPickup;i<wristLower;i=i+1)
+  for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
   {
     largeServo.write(i);              	//Lower wrist to drop victim
-    delay(microDelay);
+    delay(MICRO_DELAY);
   }
-  delay(timeDelay);                     //wait 
-  microServo.write(gripOpen);           //set gripper to 0 degrees = fully open
+  delay(TIME_DELAY);                     //wait 
+  microServo.write(GRIP_OPEN);           //set gripper to 0 degrees = fully open
 } 
 
 void raiseGripper()
 {
-  for (int i=wristLower;i>wristPickup;i=i-1)
+  for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
   {
     largeServo.write(i);   
-    delay(microDelay);
+    delay(MICRO_DELAY);
   }
-  delay(timeDelay); 
-  microServo.write(gripClosed);    
+  delay(TIME_DELAY); 
+  microServo.write(GRIP_CLOSED);    
 }
 
 //Checks US sensors - Code based on ref 1,2
@@ -223,164 +233,201 @@ long checkUS (int pinNumUS)
  //Interrupt routine for LS7184 chip 1 - Code based on ref 4
 void encoderInterrupt1()
 {
-  count1 = digitalRead(direction1) ? count1 + 1: count1 - 1;
+  Count1 = digitalRead(DIG_PIN_DIR_1) ? Count1 + 1: Count1 - 1;
 }
 
 //Interrupt routine for LS7184 chip 2 - Code based on ref 4
 void encoderInterrupt2()
 {
-  count2 = digitalRead(direction2) ? count2 + 1: count2 - 1;
+  Count2 = digitalRead(DIG_PIN_DIR_2) ? Count2 + 1: Count2 - 1;
 }
 
 void checkSensors()
 {
-  distanceIR_L = checkIR(analogPinIR_L);
-  distanceIR_R = checkIR(analogPinIR_R);
-  distanceUS_L = checkUS(digPinUS_L);
-  distanceUS_R = checkUS(digPinUS_R);
-  distanceUS_F = checkUS(digPinUS_F);
+  Distance_IR_L = checkIR(ANALOG_PIN_IR_L);
+  Distance_IR_R = checkIR(ANALOG_PIN_IR_R);
+  Distance_US_L = checkUS(DIG_PIN_US_L);
+  Distance_US_R = checkUS(DIG_PIN_US_R);
+  Distance_US_F = checkUS(DIG_PIN_US_F);
 }
 
 //Used Ref 7 for example sprintf code
 void printSensorValues()
 {
 	char buffer[128];    //2 ints,5 longs,49 chars
-	sprintf(buffer, "IR_L:%d,IR_R:%d,US_L:%d,US_R:%d,US_F:%d,Encoder1:%d,Encoder2:%d\n",distanceIR_L,distanceIR_R,distanceUS_L,distanceUS_R,distanceUS_F,count1,count2);
+	sprintf(buffer, "IR_L:%d,IR_R:%d,US_L:%d,US_R:%d,US_F:%d,Encoder1:%d,Encoder2:%d\n",Distance_IR_L,Distance_IR_R,Distance_US_L,Distance_US_R,Distance_US_F,Count1,Count2);
+	//sprintf(buffer, "Encoder1:%d,Encoder2:%d\n",Count1,Count2); //We can use this if we only want to send encoder counts
 	Serial.print(buffer);
 }
 
 void taskComplete()
 {
 	char buffer[128];  
-	sprintf(buffer,"Task:%c\n",'Y');
+	sprintf(buffer,"TaskComplete:%c\n",'Y');
 	Serial.print(buffer);
 }
 
 void turn(long numTurns,char turnDirection)
 {
-	long count_L = count1 + turnTickCount;
-	long count_R = count2 + turnTickCount;
-	md.setM1Speed(STOP);
-	md.setM2Speed(STOP);
+	long count_L = Count1 + TURN_TICK_COUNT;
+	long count_R = Count2 + TURN_TICK_COUNT;
+	mtr_ctrl.setM1Speed(STOP);
+	mtr_ctrl.setM2Speed(STOP);
   for (int i=0;i<numTurns;i=i+1)
   {
     if (turnDirection == 'L')
     {
-      while ((count1<count_L)&&(count2<count_R))
+      while ((Count1 < count_L)&&(Count2 < count_R))
       {
-        md.setM1Speed(-1*SPEED);
-        md.setM2Speed(SPEED);
+        mtr_ctrl.setM1Speed(-1*SPEED);
+        mtr_ctrl.setM2Speed(SPEED);
       }
-      md.setM1Speed(STOP);
-      md.setM2Speed(STOP);
+      mtr_ctrl.setM1Speed(STOP);
+      mtr_ctrl.setM2Speed(STOP);
     }
     else
     {
-      while ((count1<count_L)&&(count2<count_L))
+      while ((Count1 < count_L)&&(Count2 < count_R))
       {
-        md.setM1Speed(SPEED);
-        md.setM2Speed(-1*SPEED);
+        mtr_ctrl.setM1Speed(SPEED);
+        mtr_ctrl.setM2Speed(-1*SPEED);
       }
-      md.setM1Speed(STOP);
-      md.setM2Speed(STOP);
+      mtr_ctrl.setM1Speed(STOP);
+      mtr_ctrl.setM2Speed(STOP);
     }
-    
   }
-  
 }
 
 void acquireTarget()
 {
-  int drift = 1;
-  while (targetAcquired==false)
+	int drift = 1;																//Used to slow one motor to align by drifting
+	int recoveryDistance = VICTIM_AHEAD_THRESHOLD - PICKUP_VICTIM_THRESHOLD;	//Distance to back up if recovery is needed	
+	int recoveryTickCount =	recoveryDistance * CONV_FACTOR;						//ticks to travel for recovery 	
+	TargetAcquired = false;
+  
+	//Start travelling forward slowly
+	mtr_ctrl.setM1Speed(SLOW);
+	mtr_ctrl.setM2Speed(SLOW);
+  
+  while (TargetAcquired==false)
   {
     checkSensors();
-    if ((distanceIR_L < dangerZone)|| (distanceIR_R < dangerZone))
+    if ((Distance_IR_L < DANGER_ZONE) || (Distance_IR_R < DANGER_ZONE))
     {
-      //STOP
-      md.setM1Speed(STOP);
-      md.setM2Speed(STOP);
+		//STOP
+		mtr_ctrl.setM1Speed(STOP);
+		mtr_ctrl.setM2Speed(STOP);
+		//need to recover from here, back up slowly, should check sensors
+		long count_L = Count1 + recoveryTickCount;
+		long count_R = Count2 + recoveryTickCount;
+		while ((Count1 < count_L) && (Count2 < count_R))
+		{
+			checkSensors();
+			mtr_ctrl.setM1Speed(-1*SLOW);
+			mtr_ctrl.setM2Speed(-1*SLOW);
+		}
     }
-    else if ((abs(distanceIR_L - pickupVictim)<=pickupTolerance) && (abs(distanceIR_R - pickupVictim)<=pickupTolerance))
+    else if ((abs(Distance_IR_L - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_R - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_L-Distance_IR_R) <= THRESHOLD))
     {
       //Stop and pick up target
-      md.setM1Speed(STOP);
-      md.setM2Speed(STOP);
+      mtr_ctrl.setM1Speed(STOP);
+      mtr_ctrl.setM2Speed(STOP);
       grabVictim();
-      targetAcquired = true;
+      TargetAcquired = true;
     }
-    else if ((distanceIR_L <= victimAhead) || (distanceIR_R <= victimAhead))
+    else if ((Distance_IR_L <= VICTIM_AHEAD_THRESHOLD) && (Distance_IR_R <= VICTIM_AHEAD_THRESHOLD))
     {
-      if ((abs(distanceIR_L - distanceIR_R) <= threshold) && (distanceIR_L > pickupVictim) && (distanceIR_R > pickupVictim))
-      {
-      //Target Aligned, Keep Going Slowly
-      md.setM1Speed(SLOW);
-      md.setM2Speed(SLOW);
-      }
-      else if (distanceIR_R < distanceIR_L)
-      {
-      //Turn Left Slowly
-      md.setM1Speed(SLOW-drift);
-      md.setM2Speed(SLOW);
-      }
-      else
-      {
-      //Turn Right Slowly
-      md.setM1Speed(SLOW);
-      md.setM2Speed(SLOW-drift);
-      }
+	  if ((abs(Distance_IR_L - Distance_IR_R) <= THRESHOLD) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+	  {
+		//Target Aligned, Keep Going Slowly
+		  mtr_ctrl.setM1Speed(SLOW);
+		  mtr_ctrl.setM2Speed(SLOW);
+	  }
+	  else if ((Distance_IR_R < Distance_IR_L) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+	  {
+		//Drift Left Slowly
+		  mtr_ctrl.setM1Speed(SLOW-drift);
+		  mtr_ctrl.setM2Speed(SLOW);
+	  }
+	  else if ((Distance_IR_L < Distance_IR_R) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+	  {
+		//Drift Right Slowly
+		  mtr_ctrl.setM1Speed(SLOW);
+		  mtr_ctrl.setM2Speed(SLOW-drift);
+	  }
+	  else
+	  {
+		  mtr_ctrl.setM1Speed(SLOW);
+		  mtr_ctrl.setM2Speed(SLOW);
+	  }
     }
-    else
-    {
-      md.setM1Speed(SLOW);
-      md.setM2Speed(SLOW);
-    }
+	else
+	{
+	  mtr_ctrl.setM1Speed(SLOW);
+	  mtr_ctrl.setM2Speed(SLOW);
+	}
   }
 }
  
 void travelDistance(long numTicks)
 {
-  checkSensors();
-  int rightSet = distanceUS_R;
-
-  //assume going forward
-
-  int err,rtol,ltol;
-  //int tol = 3;
-  while ( count1 < numTicks && count2 < numTicks )
-  {
-  checkSensors();
-
-  //check error
-  err = rightSet - distanceUS_R;
-  if( err > 0)
-  {
-    //adjust rtol
-    rtol = 2;
-    ltol = 0;
-  }
-  else if(err < 0)
-  {
-    //adjust ltol
-    rtol = 0;
-    ltol = 2;
-  }
-  else
-  {
-    rtol = 0;
-    ltol = 0;
-  }
-
-  
-  //md.setM1Speed(SPEED+tol);
-
-  md.setM1Speed(SPEED + ltol);
-  md.setM2Speed(SPEED + rtol);
-  
-    }
-
-    md.setM1Speed(STOP);
-    md.setM2Speed(STOP);
+	long count_L = Count1 + numTicks;
+	long count_R = Count2 + numTicks;
+	checkSensors();
+	int rightSet = Distance_US_R;
+	
+	//assume going forward
+	
+	int err,rtol,ltol;
+	//int tol = 3;
+	while ( Count1 < count_L && Count2 < count_R )
+	{
+	checkSensors();
+	
+	//check error
+	err = rightSet - Distance_US_R;
+	if( err > 0)
+	{
+		//adjust rtol
+		rtol = 2;
+		ltol = 0;
+	}
+	else if(err < 0)
+	{
+		//adjust ltol
+		rtol = 0;
+		ltol = 2;
+	}
+	else
+	{
+		rtol = 0;
+		ltol = 0;
+	}
+	
+	
+	//mtr_ctrl.setM1Speed(SPEED+tol);
+	
+	mtr_ctrl.setM1Speed(SPEED + ltol);
+	mtr_ctrl.setM2Speed(SPEED + rtol);
+	
+		}
+	
+		mtr_ctrl.setM1Speed(STOP);
+		mtr_ctrl.setM2Speed(STOP);
     
+}
+ 
+void accelFromStop(int input)
+{
+  int upper = (220*input)/100;
+  for(int i = 1; i <= upper; ++i)
+  {
+    mtr_ctrl.setSpeeds(i,i);
+  }
+  delay(20);
+  for(int i = upper; i >= input; --i)
+  {
+    mtr_ctrl.setSpeeds(i,i);
+  }
 }
  
