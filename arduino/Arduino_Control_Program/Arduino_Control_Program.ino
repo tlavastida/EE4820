@@ -96,7 +96,7 @@ volatile long Distance_IR_L,Distance_IR_R;
 const int THRESHOLD = 5;                    						//used to check if IR sensors approx. equal (mm)
 
 //Variables for US sensors
-long pulseWidth,cm; 
+long pulseWidth,cm,mm; 												//Added mm in case we use instead of cm
 volatile long Distance_US_L,Distance_US_R,Distance_US_F; 
 
 //Variables for LS7184 chips
@@ -104,8 +104,8 @@ volatile long Count1 = 0;                							//tick count chip 1
 volatile long Count2 = 0;                							//tick count chip 2
 
 //Variables for encoders 
-const int CONV_FACTOR = 13;              							//counts per cm, 13 for cm 33 for in at 1x resolution
-const int TURN_TICK_COUNT = 239;          							//number of ticks for a turn
+const int CONV_FACTOR = 52;              			//counts per cm, 13 for cm 33 for in at 1x resolution, modified to 4x
+const int TURN_TICK_COUNT = 1016;          			//number of ticks for a turn (sqrt((3.875^2)+(3^2))*(pi/2)*2.54 = cm
 
 //Variables used in main loop
 volatile long TurnNum;
@@ -114,6 +114,11 @@ volatile long TickGoal;
 volatile long Distance;
 
 volatile bool TargetAcquired = false;     		//if target is in tow or not
+volatile bool AtStart = true;
+
+//Threshold variables
+volatile long US_HALL_THRESHOLD;
+volatile long US_DANGER_THRESHOLD;
 
 
 //setup servo objects and set initial position
@@ -138,6 +143,17 @@ void loop()
 {
 	char buffer[128];
 	char instruction;
+	if (AtStart)
+	{
+		//Set Threshold to maintain distance from objects
+		//Take US L/R measurements at start
+		  Distance_US_L = checkUS(DIG_PIN_US_L);
+		  Distance_US_R = checkUS(DIG_PIN_US_R);
+		  Distance = (Distance_US_L + Distance_US_R);
+		  US_HALL_THRESHOLD = Distance/3;
+		  US_DANGER_THRESHOLD = Distance/5;
+		  AtStart = false;
+	}
 	if(Serial.available() > 0)
 	{
 		instruction = Serial.read();
@@ -195,13 +211,14 @@ void grabVictim()
 void dropVictim()
 {
   //Drop victim
-  for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
-  {
-    largeServo.write(i);              	//Lower wrist to drop victim
-    delay(MICRO_DELAY);
-  }
-  delay(TIME_DELAY);                     //wait 
-  microServo.write(GRIP_OPEN);           //set gripper to 0 degrees = fully open
+	for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
+	  {
+		largeServo.write(i);              	//Lower wrist to drop victim
+		delay(MICRO_DELAY);
+	  }
+	delay(TIME_DELAY);                     //wait 
+	microServo.write(GRIP_OPEN);           //set gripper to 0 degrees = fully open
+	TargetAcquired = false;
 } 
 
 void raiseGripper()
@@ -226,8 +243,10 @@ long checkUS (int pinNumUS)
   digitalWrite(pinNumUS,LOW);               	// set pin back to low to ready for return pulse
   pinMode(pinNumUS,INPUT);                		// change pin to Input mode for return pulse
   pulseWidth = pulseIn(pinNumUS,HIGH,18500);    // wait for return pulse. Timeout after 18.5 milliseconds
-  cm = pulseWidth/88;                     		// Convert to centimeters, use 58 for Mega, 53 for Due, jk it's 88 for Due
-  return cm;
+  //cm = pulseWidth/88;                     		// Convert to centimeters, use 58 for Mega, 53 for Due, jk it's 88 for Due
+  mm = (pulseWidth*10)/88;                     	// Check using mm instead of cm
+  //return cm;
+  return mm;
 }
  
  //Interrupt routine for LS7184 chip 1 - Code based on ref 4
@@ -255,8 +274,8 @@ void checkSensors()
 void printSensorValues()
 {
 	char buffer[128];    //2 ints,5 longs,49 chars
-	sprintf(buffer, "IR_L:%d,IR_R:%d,US_L:%d,US_R:%d,US_F:%d,Encoder1:%d,Encoder2:%d\n",Distance_IR_L,Distance_IR_R,Distance_US_L,Distance_US_R,Distance_US_F,Count1,Count2);
-	//sprintf(buffer, "Encoder1:%d,Encoder2:%d\n",Count1,Count2); //We can use this if we only want to send encoder counts
+	//sprintf(buffer, "IR_L:%d,IR_R:%d,US_L:%d,US_R:%d,US_F:%d,Encoder1:%d,Encoder2:%d\n",Distance_IR_L,Distance_IR_R,Distance_US_L,Distance_US_R,Distance_US_F,Count1,Count2);
+	sprintf(buffer, "Encoder1:%d,Encoder2:%d\n",Count1,Count2); //We can use this if we only want to send encoder counts
 	Serial.print(buffer);
 }
 
@@ -311,6 +330,7 @@ void acquireTarget()
   
   while (TargetAcquired==false)
   {
+	bool dangerZoneReached = false;  
     checkSensors();
     if ((Distance_IR_L < DANGER_ZONE) || (Distance_IR_R < DANGER_ZONE))
     {
@@ -320,11 +340,23 @@ void acquireTarget()
 		//need to recover from here, back up slowly, should check sensors
 		long count_L = Count1 + recoveryTickCount;
 		long count_R = Count2 + recoveryTickCount;
-		while ((Count1 < count_L) && (Count2 < count_R))
+		//This may need to be checked to see if works, going from stop to slow speed
+		accelFromStop(-1*SLOW);
+		//Above may need to be checked to see if works, going from stop to slow speed
+		while ((Count1 < count_L) && (Count2 < count_R)&&(dangerZoneReached==false))
 		{
 			checkSensors();
-			mtr_ctrl.setM1Speed(-1*SLOW);
-			mtr_ctrl.setM2Speed(-1*SLOW);
+			if (Distance_US_F > US_DANGER_THRESHOLD)
+			{
+				mtr_ctrl.setM1Speed(-1*SLOW);
+				mtr_ctrl.setM2Speed(-1*SLOW);
+			}
+			else
+			{
+				mtr_ctrl.setM1Speed(STOP);
+				mtr_ctrl.setM2Speed(STOP);
+				dangerZoneReached=true;
+			}
 		}
     }
     else if ((abs(Distance_IR_L - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_R - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_L-Distance_IR_R) <= THRESHOLD))
@@ -373,8 +405,9 @@ void travelDistance(long numTicks)
 {
 	long count_L = Count1 + numTicks;
 	long count_R = Count2 + numTicks;
-	checkSensors();
-	int rightSet = Distance_US_R;
+	int adj = 2;
+	//checkSensors();
+	//int rightSet = Distance_US_R;
 	
 	//assume going forward
 	
@@ -382,36 +415,68 @@ void travelDistance(long numTicks)
 	//int tol = 3;
 	while ( Count1 < count_L && Count2 < count_R )
 	{
-	checkSensors();
-	
-	//check error
-	err = rightSet - Distance_US_R;
-	if( err > 0)
-	{
-		//adjust rtol
-		rtol = 2;
-		ltol = 0;
-	}
-	else if(err < 0)
-	{
-		//adjust ltol
-		rtol = 0;
-		ltol = 2;
-	}
-	else
-	{
-		rtol = 0;
-		ltol = 0;
-	}
-	
-	
-	//mtr_ctrl.setM1Speed(SPEED+tol);
-	
-	mtr_ctrl.setM1Speed(SPEED + ltol);
-	mtr_ctrl.setM2Speed(SPEED + rtol);
-	
+		checkSensors();
+		
+		//check error
+		//err = rightSet - Distance_US_R;
+		if (Distance_US_L > (2*US_HALL_THRESHOLD))
+		{
+			err = US_HALL_THRESHOLD - Distance_US_R;
+			if( err > 0)
+			{
+				//adjust rtol
+				rtol = adj;
+				ltol = 0;
+			}
+			else if(err < 0)
+			{
+				//adjust ltol
+				rtol = 0;
+				ltol = adj;
+			}
+			else
+			{
+				rtol = 0;
+				ltol = 0;
+			}
 		}
+		else
+		{
+			err = US_HALL_THRESHOLD - Distance_US_L;
+			if( err > 0)
+			{
+				//adjust rtol
+				rtol = 0;
+				ltol = adj;
+			}
+			else if(err < 0)
+			{
+				//adjust ltol
+				rtol = adj;
+				ltol = 0;
+			}
+			else
+			{
+				rtol = 0;
+				ltol = 0;
+			}
+		}
+		
+		//mtr_ctrl.setM1Speed(SPEED+tol);
+		if (Distance_US_F > US_DANGER_THRESHOLD)
+		{
+			mtr_ctrl.setM1Speed(SPEED + ltol);
+			mtr_ctrl.setM2Speed(SPEED + rtol);
+		}
+		else
+		{
+			//Stop and Recover
+			mtr_ctrl.setM1Speed(STOP);
+			mtr_ctrl.setM2Speed(STOP);
+		}
+	}
 	
+		//Stop at location
 		mtr_ctrl.setM1Speed(STOP);
 		mtr_ctrl.setM2Speed(STOP);
     
@@ -420,14 +485,36 @@ void travelDistance(long numTicks)
 void accelFromStop(int input)
 {
   int upper = (220*input)/100;
-  for(int i = 1; i <= upper; ++i)
+  //If input is positive do this
+  if (upper > 0)
   {
-    mtr_ctrl.setSpeeds(i,i);
+	  for(int i = 1; i <= upper; ++i)
+	  {
+		mtr_ctrl.setSpeeds(i,i);
+	  }
+	  delay(20);
+	  for(int i = upper; i >= input; --i)
+	  {
+		mtr_ctrl.setSpeeds(i,i);
+	  }
   }
-  delay(20);
-  for(int i = upper; i >= input; --i)
+  //If not do this
+  else if (upper < 0)
   {
-    mtr_ctrl.setSpeeds(i,i);
+	  for(int j = -1; j >= upper; --j)
+	  {
+		mtr_ctrl.setSpeeds(j,j);
+	  }
+	  delay(20);
+	  for(int j = upper; j <= input; ++j)
+	  {
+		mtr_ctrl.setSpeeds(j,j);
+	  }
+  }
+  //If zero, stop
+  else
+  {
+	  mtr_ctrl.setSpeeds(STOP,STOP);
   }
 }
  
