@@ -117,8 +117,8 @@ volatile bool TargetAcquired = false;     		//if target is in tow or not
 volatile bool AtStart = true;
 
 //Threshold variables
-volatile long US_HALL_THRESHOLD;
-volatile long US_DANGER_THRESHOLD;
+volatile long US_HALL_THRESHOLD;				//Volatile but treat as a constant
+volatile long US_DANGER_THRESHOLD;				//Volatile but treat as a constant
 
 
 //setup servo objects and set initial position
@@ -173,6 +173,7 @@ void loop()
 			break;
 			case DROPOFF:
 				dropVictim();
+				raiseGripper();
 			break;
 			case RECOVER:
 		 
@@ -243,7 +244,7 @@ long checkUS (int pinNumUS)
   digitalWrite(pinNumUS,LOW);               	// set pin back to low to ready for return pulse
   pinMode(pinNumUS,INPUT);                		// change pin to Input mode for return pulse
   pulseWidth = pulseIn(pinNumUS,HIGH,18500);    // wait for return pulse. Timeout after 18.5 milliseconds
-  //cm = pulseWidth/88;                     		// Convert to centimeters, use 58 for Mega, 53 for Due, jk it's 88 for Due
+  //cm = pulseWidth/88;                     	// Convert to centimeters, use 58 for Mega, 53 for Due, jk it's 88 for Due
   mm = (pulseWidth*10)/88;                     	// Check using mm instead of cm
   //return cm;
   return mm;
@@ -325,8 +326,9 @@ void acquireTarget()
 	TargetAcquired = false;
   
 	//Start travelling forward slowly
-	mtr_ctrl.setM1Speed(SLOW);
-	mtr_ctrl.setM2Speed(SLOW);
+	//mtr_ctrl.setM1Speed(SLOW);
+	//mtr_ctrl.setM2Speed(SLOW);
+	accelFromStop(SLOW);
   
   while (TargetAcquired==false)
   {
@@ -346,7 +348,7 @@ void acquireTarget()
 		while ((Count1 < count_L) && (Count2 < count_R)&&(dangerZoneReached==false))
 		{
 			checkSensors();
-			if (Distance_US_F > US_DANGER_THRESHOLD)
+			if ((Distance_US_F > US_DANGER_THRESHOLD) && (Distance_US_L > US_DANGER_THRESHOLD) && (Distance_US_R > US_DANGER_THRESHOLD))
 			{
 				mtr_ctrl.setM1Speed(-1*SLOW);
 				mtr_ctrl.setM2Speed(-1*SLOW);
