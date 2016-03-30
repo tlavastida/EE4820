@@ -35,7 +35,7 @@ class RobotSerial:
 
     #returns number of bytes in recv buffer
     def available(self):
-        return self.port.in_waiting()
+        return self.port.in_waiting
     
     def name(self):
         return self.port.name

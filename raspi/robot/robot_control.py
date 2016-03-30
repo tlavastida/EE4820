@@ -70,7 +70,8 @@ class Robot:
 
 
 def main_loop():
-
+    
+    #my most favorite line of code ever -- Thomas
     sara = Robot()
     
     text = input()
@@ -79,7 +80,7 @@ def main_loop():
         cmd = words[0]
         if cmd == 'go':
             if not words[1]:
-                distance = 100
+                distance = 30
             else:
                 distance = int(words[1])
             msg = sara.forward(distance)
@@ -93,11 +94,12 @@ def main_loop():
         else:
             print('Not a valid command')
 
-        txt = input()
+        text = input()
+
 
         
-
-        
+if __name__ == '__main__':
+    mainloop()
         
     
     

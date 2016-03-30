@@ -29,6 +29,9 @@ class RobotSerial:
     def recv(self):
         return self.port.readline()
 
+    def available(self):
+        return self.port.in_waiting
+    
     def name(self):
         return self.port.name
 

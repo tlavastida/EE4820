@@ -18,9 +18,14 @@ if __name__ == '__main__':
     limit = 150
     num_tests = 100
 
-    com = robot_serial.RobotSerial("/dev/ttyACM0",250000,2)
+    #com = robot_serial.RobotSerial("/dev/ttyACM0",250000,2)
+    com = robot_serial.RobotSerial('/dev/ttyACM0',115200,2)
     sleep(0.500)
 
+    if not com:
+        print("Failed to open device")
+        exit()
+    
     print(com.name())
     print('\n')
 
@@ -44,7 +49,7 @@ if __name__ == '__main__':
         msg = make_msg(op,x,y)
 
         print("sent: " + msg)
-        com.send(msg)
+        com.send(msg.encode())
 
         ret = com.recv()
         print('received: ' + ret.decode())
