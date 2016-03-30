@@ -199,41 +199,44 @@ long checkIR (int pinNumIR)
 void grabVictim()
 {
   //Pickup victim
-  microServo.write(GRIP_OPEN);           		//set gripper to fully open
-  delay(TIME_DELAY);                     		//wait 
-  largeServo.write(WRIST_LOWER);         		//Lower wrist to grab victim
-  delay(TIME_DELAY);                     		//wait 
-  microServo.write(GRIP_GRAB);           		//set gripper to grab victim
-  delay(TIME_DELAY);                     		//wait 
-  for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
-  {
-    largeServo.write(i);              			//Pickup victim
-    delay(MICRO_DELAY);
-  }
+  Serial.println("Grab Victim");
+//  microServo.write(GRIP_OPEN);           		//set gripper to fully open
+//  delay(TIME_DELAY);                     		//wait 
+//  largeServo.write(WRIST_LOWER);         		//Lower wrist to grab victim
+//  delay(TIME_DELAY);                     		//wait 
+//  microServo.write(GRIP_GRAB);           		//set gripper to grab victim
+//  delay(TIME_DELAY);                     		//wait 
+//  for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
+//  {
+//    largeServo.write(i);              			//Pickup victim
+//    delay(MICRO_DELAY);
+//  }
 } 
 
 void dropVictim()
 {
   //Drop victim
-	for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
-	  {
-		largeServo.write(i);              	//Lower wrist to drop victim
-		delay(MICRO_DELAY);
-	  }
-	delay(TIME_DELAY);                     //wait 
-	microServo.write(GRIP_OPEN);           //set gripper to 0 degrees = fully open
-	TargetAcquired = false;
+  Serial.println("Drop Victim");
+//	for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
+//	  {
+//		largeServo.write(i);              	//Lower wrist to drop victim
+//		delay(MICRO_DELAY);
+//	  }
+//	delay(TIME_DELAY);                     //wait 
+//	microServo.write(GRIP_OPEN);           //set gripper to 0 degrees = fully open
+//	TargetAcquired = false;
 } 
 
 void raiseGripper()
 {
-  for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
-  {
-    largeServo.write(i);   
-    delay(MICRO_DELAY);
-  }
-  delay(TIME_DELAY); 
-  microServo.write(GRIP_CLOSED);    
+  Serial.println("Raise Gripper");
+//  for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
+//  {
+//    largeServo.write(i);   
+//    delay(MICRO_DELAY);
+//  }
+//  delay(TIME_DELAY); 
+//  microServo.write(GRIP_CLOSED);    
 }
 
 //Checks US sensors - Code based on ref 1,2
@@ -292,239 +295,250 @@ void taskComplete()
 
 void turn(long numTurns,char turnDirection)
 {
-	long count_L = Count1 + TURN_TICK_COUNT;
-	long count_R = Count2 + TURN_TICK_COUNT;
-	mtr_ctrl.setM1Speed(STOP);
-	mtr_ctrl.setM2Speed(STOP);
+//	long count_L = Count1 + TURN_TICK_COUNT;
+//	long count_R = Count2 + TURN_TICK_COUNT;
+//	mtr_ctrl.setM1Speed(STOP);
+//	mtr_ctrl.setM2Speed(STOP);
+  Serial.println("Turn");
+  Serial.print(numTurns);
+  Serial.print(" ");
+  Serial.print(turnDirection);
+  Serial.println();
   for (int i=0;i<numTurns;i=i+1)
   {
     if (turnDirection == 'L')
     {
-      while ((Count1 < count_L)&&(Count2 < count_R))
-      {
-        mtr_ctrl.setM1Speed(-1*SPEED);
-        mtr_ctrl.setM2Speed(SPEED);
-      }
-		mtr_ctrl.setM1Speed(STOP);
-		mtr_ctrl.setM2Speed(STOP);
+        Serial.println("Turn L");
+//      while ((Count1 < count_L)&&(Count2 < count_R))
+//      {
+//        mtr_ctrl.setM1Speed(-1*SPEED);
+//        mtr_ctrl.setM2Speed(SPEED);
+//      }
+//		mtr_ctrl.setM1Speed(STOP);
+//		mtr_ctrl.setM2Speed(STOP);
     }
     else if (turnDirection == 'R')
     {
-      while ((Count1 < count_L)&&(Count2 < count_R))
-      {
-        mtr_ctrl.setM1Speed(SPEED);
-        mtr_ctrl.setM2Speed(-1*SPEED);
-      }
-		mtr_ctrl.setM1Speed(STOP);
-		mtr_ctrl.setM2Speed(STOP);
+      Serial.println("Turn R");
+//      while ((Count1 < count_L)&&(Count2 < count_R))
+//      {
+//        mtr_ctrl.setM1Speed(SPEED);
+//        mtr_ctrl.setM2Speed(-1*SPEED);
+//      }
+//		mtr_ctrl.setM1Speed(STOP);
+//		mtr_ctrl.setM2Speed(STOP);
     }
 	else
 	{
-		mtr_ctrl.setM1Speed(STOP);
-		mtr_ctrl.setM2Speed(STOP);
+    Serial.println("Turn Else");
+//		mtr_ctrl.setM1Speed(STOP);
+//		mtr_ctrl.setM2Speed(STOP);
 	}
   }
 }
 
 void acquireTarget()
 {
-	int drift = 1;																//Used to slow one motor to align by drifting
-	int recoveryDistance = VICTIM_AHEAD_THRESHOLD - PICKUP_VICTIM_THRESHOLD;	//Distance to back up if recovery is needed	
-	int recoveryTickCount =	recoveryDistance * CONV_FACTOR;						//ticks to travel for recovery 	
-	TargetAcquired = false;
-  
-	//Start travelling forward slowly
-	//mtr_ctrl.setM1Speed(SLOW);
-	//mtr_ctrl.setM2Speed(SLOW);
-	accelFromStop(SLOW);
-  
-  while (TargetAcquired==false)
-  {
-	bool dangerZoneReached = false;  
-    checkSensors();
-    if ((Distance_IR_L < DANGER_ZONE) || (Distance_IR_R < DANGER_ZONE))
-    {
-		//STOP
-		mtr_ctrl.setM1Speed(STOP);
-		mtr_ctrl.setM2Speed(STOP);
-		//need to recover from here, back up slowly, should check sensors
-		long count_L = Count1 + recoveryTickCount;
-		long count_R = Count2 + recoveryTickCount;
-		//This may need to be checked to see if works, going from stop to slow speed
-		accelFromStop(-1*SLOW);
-		//Above may need to be checked to see if works, going from stop to slow speed
-		while ((Count1 < count_L) && (Count2 < count_R)&&(dangerZoneReached==false))
-		{
-			checkSensors();
-			if ((Distance_US_F > US_DANGER_THRESHOLD) && (Distance_US_L > US_DANGER_THRESHOLD) && (Distance_US_R > US_DANGER_THRESHOLD))
-			{
-				mtr_ctrl.setM1Speed(-1*SLOW);
-				mtr_ctrl.setM2Speed(-1*SLOW);
-			}
-			else
-			{
-				mtr_ctrl.setM1Speed(STOP);
-				mtr_ctrl.setM2Speed(STOP);
-				dangerZoneReached=true;
-			}
-		}
-    }
-    else if ((abs(Distance_IR_L - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_R - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_L-Distance_IR_R) <= THRESHOLD))
-    {
-      //Stop and pick up target
-      mtr_ctrl.setM1Speed(STOP);
-      mtr_ctrl.setM2Speed(STOP);
-      grabVictim();
-      TargetAcquired = true;
-    }
-    else if ((Distance_IR_L <= VICTIM_AHEAD_THRESHOLD) && (Distance_IR_R <= VICTIM_AHEAD_THRESHOLD))
-    {
-	  if ((abs(Distance_IR_L - Distance_IR_R) <= THRESHOLD) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
-	  {
-		//Target Aligned, Keep Going Slowly
-		  mtr_ctrl.setM1Speed(SLOW);
-		  mtr_ctrl.setM2Speed(SLOW);
-	  }
-	  else if ((Distance_IR_R < Distance_IR_L) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
-	  {
-		//Drift Left Slowly
-		  mtr_ctrl.setM1Speed(SLOW-drift);
-		  mtr_ctrl.setM2Speed(SLOW);
-	  }
-	  else if ((Distance_IR_L < Distance_IR_R) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
-	  {
-		//Drift Right Slowly
-		  mtr_ctrl.setM1Speed(SLOW);
-		  mtr_ctrl.setM2Speed(SLOW-drift);
-	  }
-	  else
-	  {
-		  mtr_ctrl.setM1Speed(SLOW);
-		  mtr_ctrl.setM2Speed(SLOW);
-	  }
-    }
-	else
-	{
-	  mtr_ctrl.setM1Speed(SLOW);
-	  mtr_ctrl.setM2Speed(SLOW);
-	}
-  }
+  Serial.println("Acquire Target");
+//	int drift = 1;																//Used to slow one motor to align by drifting
+//	int recoveryDistance = VICTIM_AHEAD_THRESHOLD - PICKUP_VICTIM_THRESHOLD;	//Distance to back up if recovery is needed	
+//	int recoveryTickCount =	recoveryDistance * CONV_FACTOR;						//ticks to travel for recovery 	
+//	TargetAcquired = false;
+//  
+//	//Start travelling forward slowly
+//	//mtr_ctrl.setM1Speed(SLOW);
+//	//mtr_ctrl.setM2Speed(SLOW);
+//	accelFromStop(SLOW);
+//  
+//  while (TargetAcquired==false)
+//  {
+//	bool dangerZoneReached = false;  
+//    checkSensors();
+//    if ((Distance_IR_L < DANGER_ZONE) || (Distance_IR_R < DANGER_ZONE))
+//    {
+//		//STOP
+//		mtr_ctrl.setM1Speed(STOP);
+//		mtr_ctrl.setM2Speed(STOP);
+//		//need to recover from here, back up slowly, should check sensors
+//		long count_L = Count1 + recoveryTickCount;
+//		long count_R = Count2 + recoveryTickCount;
+//		//This may need to be checked to see if works, going from stop to slow speed
+//		accelFromStop(-1*SLOW);
+//		//Above may need to be checked to see if works, going from stop to slow speed
+//		while ((Count1 < count_L) && (Count2 < count_R)&&(dangerZoneReached==false))
+//		{
+//			checkSensors();
+//			if ((Distance_US_F > US_DANGER_THRESHOLD) && (Distance_US_L > US_DANGER_THRESHOLD) && (Distance_US_R > US_DANGER_THRESHOLD))
+//			{
+//				mtr_ctrl.setM1Speed(-1*SLOW);
+//				mtr_ctrl.setM2Speed(-1*SLOW);
+//			}
+//			else
+//			{
+//				mtr_ctrl.setM1Speed(STOP);
+//				mtr_ctrl.setM2Speed(STOP);
+//				dangerZoneReached=true;
+//			}
+//		}
+//    }
+//    else if ((abs(Distance_IR_L - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_R - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_L-Distance_IR_R) <= THRESHOLD))
+//    {
+//      //Stop and pick up target
+//      mtr_ctrl.setM1Speed(STOP);
+//      mtr_ctrl.setM2Speed(STOP);
+//      grabVictim();
+//      TargetAcquired = true;
+//    }
+//    else if ((Distance_IR_L <= VICTIM_AHEAD_THRESHOLD) && (Distance_IR_R <= VICTIM_AHEAD_THRESHOLD))
+//    {
+//	  if ((abs(Distance_IR_L - Distance_IR_R) <= THRESHOLD) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+//	  {
+//		//Target Aligned, Keep Going Slowly
+//		  mtr_ctrl.setM1Speed(SLOW);
+//		  mtr_ctrl.setM2Speed(SLOW);
+//	  }
+//	  else if ((Distance_IR_R < Distance_IR_L) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+//	  {
+//		//Drift Left Slowly
+//		  mtr_ctrl.setM1Speed(SLOW-drift);
+//		  mtr_ctrl.setM2Speed(SLOW);
+//	  }
+//	  else if ((Distance_IR_L < Distance_IR_R) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+//	  {
+//		//Drift Right Slowly
+//		  mtr_ctrl.setM1Speed(SLOW);
+//		  mtr_ctrl.setM2Speed(SLOW-drift);
+//	  }
+//	  else
+//	  {
+//		  mtr_ctrl.setM1Speed(SLOW);
+//		  mtr_ctrl.setM2Speed(SLOW);
+//	  }
+//    }
+//	else
+//	{
+//	  mtr_ctrl.setM1Speed(SLOW);
+//	  mtr_ctrl.setM2Speed(SLOW);
+//	}
+//  }
 }
  
 void travelDistance(long numTicks)
 {
-	long count_L = Count1 + numTicks;
-	long count_R = Count2 + numTicks;
-	int adj = 2;
-	//checkSensors();
-	//int rightSet = Distance_US_R;
-	
-	//assume going forward
-	
-	int err,rtol,ltol;
-	//int tol = 3;
-	while ( Count1 < count_L && Count2 < count_R )
-	{
-		checkSensors();
-		
-		//check error
-		//err = rightSet - Distance_US_R;
-		if (Distance_US_L > (2*US_HALL_THRESHOLD))
-		{
-			err = US_HALL_THRESHOLD - Distance_US_R;
-			if( err > 0)
-			{
-				//adjust rtol
-				rtol = adj;
-				ltol = 0;
-			}
-			else if(err < 0)
-			{
-				//adjust ltol
-				rtol = 0;
-				ltol = adj;
-			}
-			else
-			{
-				rtol = 0;
-				ltol = 0;
-			}
-		}
-		else
-		{
-			err = US_HALL_THRESHOLD - Distance_US_L;
-			if( err > 0)
-			{
-				//adjust rtol
-				rtol = 0;
-				ltol = adj;
-			}
-			else if(err < 0)
-			{
-				//adjust ltol
-				rtol = adj;
-				ltol = 0;
-			}
-			else
-			{
-				rtol = 0;
-				ltol = 0;
-			}
-		}
-		
-		//mtr_ctrl.setM1Speed(SPEED+tol);
-		if (Distance_US_F > US_DANGER_THRESHOLD)
-		{
-			mtr_ctrl.setM1Speed(SPEED + ltol);
-			mtr_ctrl.setM2Speed(SPEED + rtol);
-		}
-		else
-		{
-			//Stop and Recover
-			mtr_ctrl.setM1Speed(STOP);
-			mtr_ctrl.setM2Speed(STOP);
-		}
-	}
-	
-		//Stop at location
-		mtr_ctrl.setM1Speed(STOP);
-		mtr_ctrl.setM2Speed(STOP);
-    
+  Serial.println("Travel");
+  Serial.println(numTicks);
+//	long count_L = Count1 + numTicks;
+//	long count_R = Count2 + numTicks;
+//	int adj = 2;
+//	//checkSensors();
+//	//int rightSet = Distance_US_R;
+//	
+//	//assume going forward
+//	
+//	int err,rtol,ltol;
+//	//int tol = 3;
+//	while ( Count1 < count_L && Count2 < count_R )
+//	{
+//		checkSensors();
+//		
+//		//check error
+//		//err = rightSet - Distance_US_R;
+//		if (Distance_US_L > (2*US_HALL_THRESHOLD))
+//		{
+//			err = US_HALL_THRESHOLD - Distance_US_R;
+//			if( err > 0)
+//			{
+//				//adjust rtol
+//				rtol = adj;
+//				ltol = 0;
+//			}
+//			else if(err < 0)
+//			{
+//				//adjust ltol
+//				rtol = 0;
+//				ltol = adj;
+//			}
+//			else
+//			{
+//				rtol = 0;
+//				ltol = 0;
+//			}
+//		}
+//		else
+//		{
+//			err = US_HALL_THRESHOLD - Distance_US_L;
+//			if( err > 0)
+//			{
+//				//adjust rtol
+//				rtol = 0;
+//				ltol = adj;
+//			}
+//			else if(err < 0)
+//			{
+//				//adjust ltol
+//				rtol = adj;
+//				ltol = 0;
+//			}
+//			else
+//			{
+//				rtol = 0;
+//				ltol = 0;
+//			}
+//		}
+//		
+//		//mtr_ctrl.setM1Speed(SPEED+tol);
+//		if (Distance_US_F > US_DANGER_THRESHOLD)
+//		{
+//			mtr_ctrl.setM1Speed(SPEED + ltol);
+//			mtr_ctrl.setM2Speed(SPEED + rtol);
+//		}
+//		else
+//		{
+//			//Stop and Recover
+//			mtr_ctrl.setM1Speed(STOP);
+//			mtr_ctrl.setM2Speed(STOP);
+//		}
+//	}
+//	
+//		//Stop at location
+//		mtr_ctrl.setM1Speed(STOP);
+//		mtr_ctrl.setM2Speed(STOP);
+//    
 }
  
 void accelFromStop(int input)
 {
-  int upper = (220*input)/100;
-  //If input is positive do this
-  if (upper > 0)
-  {
-	  for(int i = 1; i <= upper; ++i)
-	  {
-		mtr_ctrl.setSpeeds(i,i);
-	  }
-	  delay(20);
-	  for(int i = upper; i >= input; --i)
-	  {
-		mtr_ctrl.setSpeeds(i,i);
-	  }
-  }
-  //If not do this
-  else if (upper < 0)
-  {
-	  for(int j = -1; j >= upper; --j)
-	  {
-		mtr_ctrl.setSpeeds(j,j);
-	  }
-	  delay(20);
-	  for(int j = upper; j <= input; ++j)
-	  {
-		mtr_ctrl.setSpeeds(j,j);
-	  }
-  }
-  //If zero, stop
-  else
-  {
-	  mtr_ctrl.setSpeeds(STOP,STOP);
-  }
+//  int upper = (220*input)/100;
+//  //If input is positive do this
+//  if (upper > 0)
+//  {
+//	  for(int i = 1; i <= upper; ++i)
+//	  {
+//		mtr_ctrl.setSpeeds(i,i);
+//	  }
+//	  delay(20);
+//	  for(int i = upper; i >= input; --i)
+//	  {
+//		mtr_ctrl.setSpeeds(i,i);
+//	  }
+//  }
+//  //If not do this
+//  else if (upper < 0)
+//  {
+//	  for(int j = -1; j >= upper; --j)
+//	  {
+//		mtr_ctrl.setSpeeds(j,j);
+//	  }
+//	  delay(20);
+//	  for(int j = upper; j <= input; ++j)
+//	  {
+//		mtr_ctrl.setSpeeds(j,j);
+//	  }
+//  }
+//  //If zero, stop
+//  else
+//  {
+//	  mtr_ctrl.setSpeeds(STOP,STOP);
+//  }
 }
  

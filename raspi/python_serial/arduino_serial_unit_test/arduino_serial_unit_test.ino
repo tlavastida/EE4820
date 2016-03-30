@@ -5,8 +5,8 @@ long z;
 char val;
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(2000000);
-  //Serial.begin(115200);
+  //Serial.begin(250000);
+  Serial.begin(115200);
 
 }
 
