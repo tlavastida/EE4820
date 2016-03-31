@@ -155,16 +155,16 @@ void loop()
       
       Distance_US_L = checkUS(DIG_PIN_US_L);
       Distance_US_R = checkUS(DIG_PIN_US_R);
-      if (Distance_US_L > Distance_US_R)
-      {
-        Distance = Distance_US_R;
-      }
-      else
-      {
-        Distance = Distance_US_L;
-      }
-      US_HALL_THRESHOLD = Distance;
-      US_DANGER_THRESHOLD = Distance/2; 
+//      if (Distance_US_L > Distance_US_R)
+//      {
+//        Distance = Distance_US_R;
+//      }
+//      else
+//      {
+//        Distance = Distance_US_L;
+//      }
+      //US_HALL_THRESHOLD = Distance;
+      //US_DANGER_THRESHOLD = Distance/2; 
       
       Distance = (Distance_US_L + Distance_US_R);
       US_HALL_THRESHOLD = Distance/3;
@@ -488,14 +488,14 @@ void travelDistance(long numTicks)
       if( err > 0)
       {
         //adjust rtol
-        rtol = KP*err;
+        rtol = KP*err;    //switch this to ltol
         ltol = 0;
       }
       else if(err < 0)
       {
         //adjust ltol
         rtol = 0;
-        ltol = -1*KP*err;
+        ltol = -1*KP*err;  //switch this to rtol
       }
       else
       {
