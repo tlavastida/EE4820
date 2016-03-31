@@ -165,27 +165,32 @@ void loop()
 				Distance = Serial.parseInt();
 				TickGoal = CONV_FACTOR * Distance;
 				travelDistance(TickGoal);
+				taskComplete();
 			break;
 			case TURN:
 				TurnNum = Serial.parseInt();
 				TurnDir = Serial.read();
 				turn(TurnNum,TurnDir);
+				taskComplete();
 			break;
 			case PICKUP:
 				acquireTarget();
+				taskComplete();
 			break;
 			case DROPOFF:
 				dropVictim();
 				raiseGripper();
+				taskComplete();
 			break;
 			case RECOVER:
+				taskComplete();
 		 
 			break;
 			default: 
 		 
 			break;
 		}
-		taskComplete();
+		
 	}
 }
 
