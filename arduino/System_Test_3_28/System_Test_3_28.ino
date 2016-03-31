@@ -484,18 +484,38 @@ void travelDistance(long numTicks)
     //err = rightSet - Distance_US_R;
     if (Distance_US_L > (2*US_HALL_THRESHOLD))
     {
-      err = US_HALL_THRESHOLD - Distance_US_L;
+      err = US_HALL_THRESHOLD - Distance_US_R;
       if( err > 0)
       {
         //adjust rtol
-        rtol = KP*err;    //switch this to ltol
-        ltol = 0;
+
+        //original
+        //rtol = KP*err;    //switch this to ltol
+        //ltol = 0;
+
+        //first change
+        ltol = KP*err;
+        rtol = 0;
+
+        //second change
+        //ltol = 5;
+        //rtol = 0;
       }
       else if(err < 0)
       {
         //adjust ltol
-        rtol = 0;
-        ltol = -1*KP*err;  //switch this to rtol
+
+        //original
+        //rtol = 0;
+        //ltol = -1*KP*err;  //switch this to rtol
+
+        //first change
+        ltol = 0;
+        rtol = -1*KP*err;
+
+        //2nd change
+        //ltol = 0;
+        //rtol = 5;
       }
       else
       {
@@ -505,18 +525,30 @@ void travelDistance(long numTicks)
     }
     else
     {
-      err = US_HALL_THRESHOLD - Distance_US_R;
+      err = US_HALL_THRESHOLD - Distance_US_L;
       if( err > 0)
       {
         //adjust rtol
-        rtol = 0;
-        ltol = KP*err;
+
+        //original
+        //rtol = 0;
+        //ltol = KP*err;
+
+        //first change
+        rtol = KP*err;
+        ltol = 0;
       }
       else if(err < 0)
       {
         //adjust ltol
-        rtol = -1*KP*err;
-        ltol = 0;
+
+        //original
+        //rtol = -1*KP*err;
+        //ltol = 0;
+
+        //first change
+        rtol = 0;
+        ltol = -1*KP*err;
       }
       else
       {
@@ -557,6 +589,8 @@ void accelFromStop(int input , int code)
   int upper = (220*input)/100;
   //If input is positive do this
   if (upper > 0)
+
+  
   {
     
     for(int i = 1; i <= upper; ++i)
@@ -599,4 +633,3 @@ void accelFromStop(int input , int code)
   }
 }
  
-
