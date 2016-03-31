@@ -43,6 +43,9 @@ const int STOP = 0;
 const int SLOW = 40;     
 const int SPEED = 80;
 
+//Controls
+const int KP = 1;
+
 Servo microServo;   //create an servo object for the 9g FT-FS90MG micro servo
 Servo largeServo;   //create an servo object for the RobotGeek 180 degree servo
 
@@ -59,13 +62,13 @@ const int ANALOG_PIN_IR_R = A9;
 //declare pins for Ultrasonic sensors
 const int DIG_PIN_US_L = 31;
 const int DIG_PIN_US_R = 33;
-const int DIG_PIN_US_F = 35;
+const int DIG_PIN_US_F = 35;        
 
 //declare pins for LS7184 chips
-const int DIG_PIN_CLK_1 = 30;             //interrupt will be attached for this (chip1)
-const int DIG_PIN_DIR_1 = 32;         //requires digital pin (chip1)
-const int DIG_PIN_CLK_2 = 34;             //interrupt will be attached for this (chip2)
-const int DIG_PIN_DIR_2 = 36;         //requires digital pin (chip2)
+const int DIG_PIN_CLK_1 = 20;             //interrupt will be attached for this (chip1)   //Change back to 30 for Due
+const int DIG_PIN_DIR_1 = 32;             //requires digital pin (chip1)
+const int DIG_PIN_CLK_2 = 21;             //interrupt will be attached for this (chip2)   //Change back to 34 for Due
+const int DIG_PIN_DIR_2 = 36;             //requires digital pin (chip2)
 //*********************************************************************************
 
 //Time delays for gripper movement
@@ -120,6 +123,8 @@ volatile bool AtStart = true;
 volatile long US_HALL_THRESHOLD;        //Volatile but treat as a constant
 volatile long US_DANGER_THRESHOLD;        //Volatile but treat as a constant
 
+volatile char instruction; 
+
 
 //setup servo objects and set initial position
 void setup()
@@ -134,7 +139,7 @@ void setup()
   pinMode(DIG_PIN_CLK_2,INPUT);
   pinMode(DIG_PIN_DIR_2,INPUT);
   attachInterrupt(digitalPinToInterrupt(DIG_PIN_CLK_2),encoderInterrupt2,RISING);
-  Serial.begin(9600);
+  Serial.begin(250000);
   mtr_ctrl.init();
 }
  
@@ -143,10 +148,11 @@ void loop()
 {
   /* char buffer[128];
   char instruction; */
-  //if (AtStart)
-  //{
+  if (AtStart)
+  {
     //Set Threshold to maintain distance from objects
     //Take US L/R measurements at start
+      
       Distance_US_L = checkUS(DIG_PIN_US_L);
       Distance_US_R = checkUS(DIG_PIN_US_R);
       if (Distance_US_L > Distance_US_R)
@@ -159,9 +165,10 @@ void loop()
       }
       US_HALL_THRESHOLD = Distance;
       US_DANGER_THRESHOLD = Distance/2; 
-      /* Distance = (Distance_US_L + Distance_US_R);
+      
+      Distance = (Distance_US_L + Distance_US_R);
       US_HALL_THRESHOLD = Distance/3;
-      US_DANGER_THRESHOLD = Distance/5; */
+      US_DANGER_THRESHOLD = Distance/5; 
       //delay(3000);      
       
       //Distance = 121;   //cm, 4 feet
@@ -180,13 +187,15 @@ void loop()
 //      TurnDir = 'L';
 //      turn(TurnNum,TurnDir);
       
-      //AtStart = false;
+      AtStart = false;
 
-      checkSensors();
-  //}
+      //checkSensors();
+      //Serial.println();
+      //delay(200);
+  }
   
   
-  /* if(Serial.available() > 0)
+ if(Serial.available() > 0)
   {
     instruction = Serial.read();
     switch (instruction) {
@@ -194,34 +203,39 @@ void loop()
         Distance = Serial.parseInt();
         TickGoal = CONV_FACTOR * Distance;
         travelDistance(TickGoal);
+        taskComplete();
       break;
       case TURN:
         TurnNum = Serial.parseInt();
         TurnDir = Serial.read();
         turn(TurnNum,TurnDir);
+        taskComplete();
       break;
       case PICKUP:
         acquireTarget();
+        taskComplete();
       break;
       case DROPOFF:
         dropVictim();
         raiseGripper();
+        taskComplete();
       break;
       case RECOVER:
-     
+          taskComplete();
       break;
       default: 
      
       break;
     }
     //taskComplete();
-  } */
+  } 
 }
 
 long checkIR (int pinNumIR)
 {
   analogValue = analogRead(pinNumIR);                       //Read current analog value from pin
-  distanceValue = (400000-(42*analogValue))/(10*analogValue);   //conversion based on one from ref 
+  //distanceValue = (400000-(42*analogValue))/(10*analogValue);   //conversion based on one from ref //Due conversion
+  distanceValue = (264000-(42*analogValue))/(10*analogValue);   //conversion based on one from ref //Mega conversion
   return distanceValue;                                 //mm
 }
 
@@ -277,8 +291,11 @@ long checkUS (int pinNumUS)
   pinMode(pinNumUS,INPUT);                    // change pin to Input mode for return pulse
   pulseWidth = pulseIn(pinNumUS,HIGH,18500);    // wait for return pulse. Timeout after 18.5 milliseconds
   //cm = pulseWidth/88;                       // Convert to centimeters, use 58 for Mega, 53 for Due, jk it's 88 for Due
-  mm = (pulseWidth*10)/88;                      // Check using mm instead of cm
+  //mm = (pulseWidth*10)/88;                      // Check using mm instead of cm //Due
+  mm = (pulseWidth*10)/58;                      // Check using mm instead of cm //Mega
   //return cm;
+  //Serial.print(mm);
+ //Serial.print(" ");
   return mm;
 }
  
@@ -299,7 +316,6 @@ void checkSensors()
   Distance_IR_L = checkIR(ANALOG_PIN_IR_L);
   Distance_IR_R = checkIR(ANALOG_PIN_IR_R);
   Distance_US_L = checkUS(DIG_PIN_US_L);
-  Serial.println(Distance_US_L);
   Distance_US_R = checkUS(DIG_PIN_US_R);
   Distance_US_F = checkUS(DIG_PIN_US_F);
 }
@@ -322,15 +338,31 @@ void taskComplete()
 
 void turn(long numTurns,char turnDirection)
 {
-  long count_L = Count1 + TURN_TICK_COUNT;
-  long count_R = Count2 + TURN_TICK_COUNT;
+  long count_L;// = Count1 + TURN_TICK_COUNT;
+  long count_R;// = Count2 + TURN_TICK_COUNT;
   mtr_ctrl.setM1Speed(STOP);
   mtr_ctrl.setM2Speed(STOP);
   for (int i=0;i<numTurns;i=i+1)
   {
     if (turnDirection == 'L')
     {
-      while ((Count1 < count_L)&&(Count2 < count_R))
+      count_L = Count1 + TURN_TICK_COUNT;
+      count_R = Count2 - TURN_TICK_COUNT; 
+      accelFromStop(SPEED,2); //left
+      while ((Count1 < count_L)&&(Count2 > count_R))
+      {
+        mtr_ctrl.setM1Speed(SPEED);
+        mtr_ctrl.setM2Speed(-1*SPEED);
+      }
+      mtr_ctrl.setM1Speed(STOP);
+      mtr_ctrl.setM2Speed(STOP);
+    }
+    else if (turnDirection == 'R')
+    {
+      count_L = Count1 - TURN_TICK_COUNT;
+      count_R = Count2 + TURN_TICK_COUNT;
+      accelFromStop(SPEED,3); //right
+      while ((Count1 > count_L)&&(Count2 < count_R))
       {
         mtr_ctrl.setM1Speed(-1*SPEED);
         mtr_ctrl.setM2Speed(SPEED);
@@ -338,13 +370,8 @@ void turn(long numTurns,char turnDirection)
       mtr_ctrl.setM1Speed(STOP);
       mtr_ctrl.setM2Speed(STOP);
     }
-    else
+    else 
     {
-      while ((Count1 < count_L)&&(Count2 < count_R))
-      {
-        mtr_ctrl.setM1Speed(SPEED);
-        mtr_ctrl.setM2Speed(-1*SPEED);
-      }
       mtr_ctrl.setM1Speed(STOP);
       mtr_ctrl.setM2Speed(STOP);
     }
@@ -361,7 +388,7 @@ void acquireTarget()
   //Start travelling forward slowly
   //mtr_ctrl.setM1Speed(SLOW);
   //mtr_ctrl.setM2Speed(SLOW);
-  accelFromStop(SLOW);
+  accelFromStop(SLOW,0); //forward
   
   while (TargetAcquired==false)
   {
@@ -376,7 +403,7 @@ void acquireTarget()
     long count_L = Count1 + recoveryTickCount;
     long count_R = Count2 + recoveryTickCount;
     //This may need to be checked to see if works, going from stop to slow speed
-    accelFromStop(-1*SLOW);
+    accelFromStop(SLOW,1); //reverse
     //Above may need to be checked to see if works, going from stop to slow speed
     while ((Count1 < count_L) && (Count2 < count_R)&&(dangerZoneReached==false))
     {
@@ -440,7 +467,6 @@ void travelDistance(long numTicks)
 {
   long count_L = Count1 + numTicks;
   long count_R = Count2 + numTicks;
-  int adj = 2;
   //checkSensors();
   //int rightSet = Distance_US_R;
   
@@ -448,6 +474,8 @@ void travelDistance(long numTicks)
   
   int err,rtol,ltol;
   //int tol = 3;
+  accelFromStop(SPEED,0);
+  
   while ( Count1 < count_L && Count2 < count_R )
   {
     checkSensors();
@@ -456,18 +484,18 @@ void travelDistance(long numTicks)
     //err = rightSet - Distance_US_R;
     if (Distance_US_L > (2*US_HALL_THRESHOLD))
     {
-      err = US_HALL_THRESHOLD - Distance_US_R;
+      err = US_HALL_THRESHOLD - Distance_US_L;
       if( err > 0)
       {
         //adjust rtol
-        rtol = adj;
+        rtol = KP*err;
         ltol = 0;
       }
       else if(err < 0)
       {
         //adjust ltol
         rtol = 0;
-        ltol = adj;
+        ltol = -1*KP*err;
       }
       else
       {
@@ -477,17 +505,17 @@ void travelDistance(long numTicks)
     }
     else
     {
-      err = US_HALL_THRESHOLD - Distance_US_L;
+      err = US_HALL_THRESHOLD - Distance_US_R;
       if( err > 0)
       {
         //adjust rtol
         rtol = 0;
-        ltol = adj;
+        ltol = KP*err;
       }
       else if(err < 0)
       {
         //adjust ltol
-        rtol = adj;
+        rtol = -1*KP*err;
         ltol = 0;
       }
       else
@@ -516,38 +544,56 @@ void travelDistance(long numTicks)
     mtr_ctrl.setM2Speed(STOP);
     
 }
- 
-void accelFromStop(int input)
+
+//int code
+// 0 ---- forward
+// 1 ---- backward
+// 2 ---- left
+// 3 ---- right
+// default ---- return? 
+void accelFromStop(int input , int code)
 {
+  //assert input > 0
   int upper = (220*input)/100;
   //If input is positive do this
   if (upper > 0)
   {
+    
     for(int i = 1; i <= upper; ++i)
     {
-    mtr_ctrl.setSpeeds(i,i);
+      switch(code) {
+        case 0:
+          mtr_ctrl.setSpeeds(i,i);
+          break;
+        case 1:
+          mtr_ctrl.setSpeeds(-1*i,-1*i);
+          break;
+        case 2:
+          mtr_ctrl.setSpeeds(i,-1*i);
+          break;
+        case 3:
+          mtr_ctrl.setSpeeds(-1*i,i);
+      }
     }
     delay(20);
     for(int i = upper; i >= input; --i)
     {
-    mtr_ctrl.setSpeeds(i,i);
+       switch(code) {
+        case 0:
+          mtr_ctrl.setSpeeds(i,i);
+          break;
+        case 1:
+          mtr_ctrl.setSpeeds(-1*i,-1*i);
+          break;
+        case 2:
+          mtr_ctrl.setSpeeds(i,-1*i);
+          break;
+        case 3:
+          mtr_ctrl.setSpeeds(-1*i,i);
+      }
     }
   }
-  //If not do this
-  else if (upper < 0)
-  {
-    for(int j = -1; j >= upper; --j)
-    {
-    mtr_ctrl.setSpeeds(j,j);
-    }
-    delay(20);
-    for(int j = upper; j <= input; ++j)
-    {
-    mtr_ctrl.setSpeeds(j,j);
-    }
-  }
-  //If zero, stop
-  else
+  else //If zero, stop
   {
     mtr_ctrl.setSpeeds(STOP,STOP);
   }
