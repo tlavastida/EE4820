@@ -126,7 +126,6 @@ volatile long US_DANGER_THRESHOLD;        //Volatile but treat as a constant
 
 //Options to manipulate gripper
 volatile char GripOption;
-volatile char WristOption;
 
 volatile char instruction; 
 
@@ -227,8 +226,7 @@ void loop()
       break;
 	    case MANIPULATE:
   			GripOption = Serial.read();			//send C for closed, O for open
-  			WristOption = Serial.read();		//send U for up, and D for down
-  			manipulateGripper(GripOption,WristOption);
+  			manipulateGripper(GripOption);
   			taskComplete();
       break;
       case RECOVER:
@@ -250,17 +248,17 @@ long checkIR (int pinNumIR)
   return distanceValue;                                 //mm
 }
 
-void manipulateGripper(char grip,char wrist)
+void manipulateGripper(char option)
 {
-	if (grip == 'C')
+	if (option == 'C')
 	{
 		microServo.write(GRIP_GRAB);              //set gripper to grab victim
 	}
-	else if (grip == 'O')
+	else if (option == 'O')
 	{
 		microServo.write(GRIP_OPEN);              //set gripper to fully open
 	}
-	if (wrist == 'U')
+	else if (option == 'U')
 	{
 		for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
 		{
@@ -268,13 +266,17 @@ void manipulateGripper(char grip,char wrist)
 			delay(MICRO_DELAY);
 		}
 	}
-	else if (wrist = 'D')
+	else if (option = 'D')
 	{
 		for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
 		{
 			largeServo.write(i);                //Lower wrist to drop victim
 			delay(MICRO_DELAY);
 		}
+	}
+	else
+	{
+		delay(MICRO_DELAY);
 	}
 }
 
@@ -297,10 +299,10 @@ void grabVictim()
 void dropVictim()
 {
   //Drop victim
-  for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
+  for (int i = WRIST_PICKUP; i < WRIST_LOWER; i = i+1)
     {
     largeServo.write(i);                //Lower wrist to drop victim
-    delay(MICRO_DELAY);
+    delay(MICRO_DELAY);       //maybe delayMicroseconds?
     }
   delay(TIME_DELAY);                     //wait 
   microServo.write(GRIP_OPEN);           //set gripper to 0 degrees = fully open
@@ -515,13 +517,15 @@ void travelDistance(long numTicks)
   //int tol = 3;
   accelFromStop(SPEED,0);
   
+  bool useRight = Distance_US_L > (2*US_HALL_THRESHOLD);
+  
   while ( Count1 < count_L && Count2 < count_R )
   {
     checkSensors();
     
     //check error
     //err = rightSet - Distance_US_R;
-    if (Distance_US_L > (2*US_HALL_THRESHOLD))
+    if (useRight)
     {
       err = US_HALL_THRESHOLD - Distance_US_R;
       if( err > 0)
