@@ -37,6 +37,7 @@ const char TURN = 'T';
 const char PICKUP = 'P';
 const char DROPOFF = 'D';
 const char RECOVER = 'R';
+const char MANIPULATE = 'M';
 
 //Motor speeds
 const int STOP = 0;  
@@ -122,6 +123,10 @@ volatile bool AtStart = true;
 //Threshold variables
 volatile long US_HALL_THRESHOLD;        //Volatile but treat as a constant
 volatile long US_DANGER_THRESHOLD;        //Volatile but treat as a constant
+
+//Options to manipulate gripper
+volatile char GripOption;
+volatile char WristOption;
 
 volatile char instruction; 
 
@@ -220,6 +225,12 @@ void loop()
         raiseGripper();
         taskComplete();
       break;
+	    case MANIPULATE:
+  			GripOption = Serial.read();			//send C for closed, O for open
+  			WristOption = Serial.read();		//send U for up, and D for down
+  			manipulateGripper(GripOption,WristOption);
+  			taskComplete();
+      break;
       case RECOVER:
           taskComplete();
       break;
@@ -237,6 +248,34 @@ long checkIR (int pinNumIR)
   //distanceValue = (400000-(42*analogValue))/(10*analogValue);   //conversion based on one from ref //Due conversion
   distanceValue = (264000-(42*analogValue))/(10*analogValue);   //conversion based on one from ref //Mega conversion
   return distanceValue;                                 //mm
+}
+
+void manipulateGripper(char grip,char wrist)
+{
+	if (grip == 'C')
+	{
+		microServo.write(GRIP_GRAB);              //set gripper to grab victim
+	}
+	else if (grip == 'O')
+	{
+		microServo.write(GRIP_OPEN);              //set gripper to fully open
+	}
+	if (wrist == 'U')
+	{
+		for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
+		{
+			largeServo.write(i);                    //Pickup victim
+			delay(MICRO_DELAY);
+		}
+	}
+	else if (wrist = 'D')
+	{
+		for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
+		{
+			largeServo.write(i);                //Lower wrist to drop victim
+			delay(MICRO_DELAY);
+		}
+	}
 }
 
 void grabVictim()
