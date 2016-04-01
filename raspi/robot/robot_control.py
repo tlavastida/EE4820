@@ -33,12 +33,28 @@ class Robot:
         self.dx = 1
         self.dy = 0
 
+    def print_state(self):
+        print('rescued victims: ' + str(self.found_victims))
+        print('position: (' + str(self.grid_x) + ',' + str(self.grid_y))
+        print('direction: (' + str(self.dx) + ',' + str(self.dy))
+        
+        
     #updates grid positions in the map using an encoder reading
     def update_grid_position(self,encoder1,encoder2):
         avg = (encoder1+encoder2)//2 #integer division for now, maybe try floating point plus round later
         self.grid_x += self.dx*avg   #FIX LATER - NEED CORRECT CONVERSION FACTOR TO GRID SPACE
         self.grid_y += self.dy*avg   #FIX LATER - NEED CORRECT CONVERSION FACTOR TO GRID SPACE
 
+    #abstracting the pattern from the other functions I wrote:
+    def exec_cmd(self,cmd_str):
+        self.ser.send(cmd_str):
+        while self.ser.available() <= 0:
+            pass
+        msg = self.ser.recv()
+        return msg #the callee decides how to process the info in the message
+
+
+    #functions I already wrote, all had a similar pattern
     def forward(self,distance):
         self.ser.send('G'+str(distance))
         while self.ser.available() <= 0:
@@ -66,13 +82,55 @@ class Robot:
         self.dy = -1*self.dx
         return msg #PLACEHOLDER
 
+    #tells arduino to acquire a target victim and pickup
+    def pickup(self):
+        self.ser.send('P')
+        while self.ser.available() <= 0:
+            pass
+        msg = self.ser.recv()
+
+        #update state?
+
+        return msg #PLACEHOLDER
+
+    def lower_gripper(self):
+        self.ser.send('MD')
+        while self.ser.available() <= 0:
+            pass
+        msg = self.ser.recv()
+
+        return msg
+
+    def raise_gripper(self):
+        self.ser.send('MU')
+        while self.ser.available() <= 0:
+            pass
+        msg = self.ser.recv()
+
+        return msg
+
+    def open_grip(self):
+        self.ser.send('MO')
+        while self.ser.available() <= 0:
+            pass
+        msg = self.ser.recv()
+        return msg
+    
+    def close_grip(self):
+        self.ser.send('MC')
+        while self.ser.available() <= 0:
+            pass
+        msg = self.ser.recv()
+
+        return msg
 
 
-def main_loop():
+def interactive_main_loop():
     
     #my most favorite line of code ever -- Thomas
     sara = Robot()
 
+    #cmd_str = ''
     text = input('>>> ')
     while text != 'exit':
         words = text.split()
@@ -82,7 +140,7 @@ def main_loop():
                 distance = 30
             else:
                 distance = int(words[1])
-            msg = sara.forward(distance)
+            msg = sara.forward(cmd_str)
             print(msg)
             #print('going forward ' + str(distance) + ' centimeters')
         elif cmd == 'left':
