@@ -380,7 +380,7 @@ void turn(long numTurns,char turnDirection)
 
 void acquireTarget()
 {
-  int drift = 1;                                //Used to slow one motor to align by drifting
+  int drift = 3;                                //Used to slow one motor to align by drifting
   int recoveryDistance = VICTIM_AHEAD_THRESHOLD - PICKUP_VICTIM_THRESHOLD;  //Distance to back up if recovery is needed 
   int recoveryTickCount = recoveryDistance * CONV_FACTOR;           //ticks to travel for recovery  
   TargetAcquired = false;
@@ -388,11 +388,11 @@ void acquireTarget()
   //Start travelling forward slowly
   //mtr_ctrl.setM1Speed(SLOW);
   //mtr_ctrl.setM2Speed(SLOW);
-  accelFromStop(SLOW,0); //forward
+  accelFromStop(SLOW,1); //reverse because gripper on back
   
   while (TargetAcquired==false)
   {
-  bool dangerZoneReached = false;  
+	bool dangerZoneReached = false;  
     checkSensors();
     if ((Distance_IR_L < DANGER_ZONE) || (Distance_IR_R < DANGER_ZONE))
     {
@@ -403,15 +403,15 @@ void acquireTarget()
     long count_L = Count1 + recoveryTickCount;
     long count_R = Count2 + recoveryTickCount;
     //This may need to be checked to see if works, going from stop to slow speed
-    accelFromStop(SLOW,1); //reverse
+    accelFromStop(SLOW,0); //forward
     //Above may need to be checked to see if works, going from stop to slow speed
     while ((Count1 < count_L) && (Count2 < count_R)&&(dangerZoneReached==false))
     {
       checkSensors();
       if ((Distance_US_F > US_DANGER_THRESHOLD) && (Distance_US_L > US_DANGER_THRESHOLD) && (Distance_US_R > US_DANGER_THRESHOLD))
       {
-        mtr_ctrl.setM1Speed(-1*SLOW);
-        mtr_ctrl.setM2Speed(-1*SLOW);
+        mtr_ctrl.setM1Speed(SLOW);
+        mtr_ctrl.setM2Speed(SLOW);
       }
       else
       {
@@ -429,37 +429,37 @@ void acquireTarget()
       grabVictim();
       TargetAcquired = true;
     }
-    else if ((Distance_IR_L <= VICTIM_AHEAD_THRESHOLD) && (Distance_IR_R <= VICTIM_AHEAD_THRESHOLD))
-    {
-    if ((abs(Distance_IR_L - Distance_IR_R) <= THRESHOLD) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
-    {
-    //Target Aligned, Keep Going Slowly
-      mtr_ctrl.setM1Speed(SLOW);
-      mtr_ctrl.setM2Speed(SLOW);
-    }
-    else if ((Distance_IR_R < Distance_IR_L) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
-    {
-    //Drift Left Slowly
-      mtr_ctrl.setM1Speed(SLOW-drift);
-      mtr_ctrl.setM2Speed(SLOW);
-    }
-    else if ((Distance_IR_L < Distance_IR_R) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
-    {
-    //Drift Right Slowly
-      mtr_ctrl.setM1Speed(SLOW);
-      mtr_ctrl.setM2Speed(SLOW-drift);
-    }
-    else
-    {
-      mtr_ctrl.setM1Speed(SLOW);
-      mtr_ctrl.setM2Speed(SLOW);
-    }
-    }
-  else
-  {
-    mtr_ctrl.setM1Speed(SLOW);
-    mtr_ctrl.setM2Speed(SLOW);
-  }
+	else if ((Distance_IR_L <= VICTIM_AHEAD_THRESHOLD) && (Distance_IR_R <= VICTIM_AHEAD_THRESHOLD))
+	{
+		if ((abs(Distance_IR_L - Distance_IR_R) <= THRESHOLD) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+		{
+		//Target Aligned, Keep Going Slowly
+		  mtr_ctrl.setM1Speed(-1*SLOW);
+		  mtr_ctrl.setM2Speed(-1*SLOW);
+		}
+		else if ((Distance_IR_R < Distance_IR_L) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+		{
+		//Drift Left Slowly
+		  mtr_ctrl.setM1Speed(-1*SLOW-drift);
+		  mtr_ctrl.setM2Speed(-1*SLOW);
+		}
+		else if ((Distance_IR_L < Distance_IR_R) && (Distance_IR_L > PICKUP_VICTIM_THRESHOLD) && (Distance_IR_R > PICKUP_VICTIM_THRESHOLD))
+		{
+		//Drift Right Slowly
+		  mtr_ctrl.setM1Speed(-1*SLOW);
+		  mtr_ctrl.setM2Speed(-1*SLOW-drift);
+		}
+		else
+		{
+		  mtr_ctrl.setM1Speed(-1*SLOW);
+		  mtr_ctrl.setM2Speed(-1*SLOW);
+		}
+	}
+	else
+	{
+		mtr_ctrl.setM1Speed(-1*SLOW);
+		mtr_ctrl.setM2Speed(-1*SLOW);
+	}
   }
 }
  
