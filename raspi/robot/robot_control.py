@@ -47,7 +47,7 @@ class Robot:
 
     #abstracting the pattern from the other functions I wrote:
     def exec_cmd(self,cmd_str):
-        self.ser.send(cmd_str):
+        self.ser.send(cmd_str)
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
