@@ -140,7 +140,7 @@ def interactive_main_loop():
                 distance = 30
             else:
                 distance = int(words[1])
-            msg = sara.forward(cmd_str)
+            msg = sara.forward('G'+str(distance))
             print(msg)
             #print('going forward ' + str(distance) + ' centimeters')
         elif cmd == 'left':
@@ -151,6 +151,21 @@ def interactive_main_loop():
             msg = sara.turn_right()
             print(msg)
             #print('turning right')
+        elif cmd == 'lower':
+            msg = sara.lower_gripper()
+            print(msg)
+        elif cmd == 'raise':
+            msg = sara.raise_gripper()
+            print(msg)
+        elif cmd == 'close':
+            msg = sara.close_grip()
+            print(msg)
+        elif cmd == 'open':
+            msg = sara.open_grip()
+            print(msg)
+        elif cmd == 'pickup':
+            msg = sara.pickup()
+            print(msg)
         elif cmd == 'help':
             print('go <distance> --- move forward <distance> centimeters')
             print('left --- turn 90 degrees left')
@@ -165,7 +180,7 @@ def interactive_main_loop():
 
         
 if __name__ == '__main__':
-    main_loop()
+    interactive_main_loop()
         
     
     
