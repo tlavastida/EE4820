@@ -39,13 +39,19 @@ const char DROPOFF = 'D';
 const char RECOVER = 'R';
 const char MANIPULATE = 'M';
 
+//for gripper commands
+const char OPEN = 'O';
+const char CLOSE = 'C';
+const char UP = 'U';
+const char DOWN = 'D';
+
 //Motor speeds
 const int STOP = 0;  
 const int SLOW = 40;     
 const int SPEED = 80;
 
 //Controls
-const int KP = 1;
+const int KP_INV = 10; //Kp = 1/10 so Kp^-1 = 10
 
 Servo microServo;   //create an servo object for the 9g FT-FS90MG micro servo
 Servo largeServo;   //create an servo object for the RobotGeek 180 degree servo
@@ -127,6 +133,7 @@ volatile long US_DANGER_THRESHOLD;        	//Volatile but treat as a constant
 
 //Options to manipulate gripper
 volatile char GripOption;
+
 
 
 //setup servo objects and set initial position
@@ -224,7 +231,7 @@ void loop()
         taskComplete();
       break;
 	    case MANIPULATE:
-  			GripOption = Serial.read();			//send C for closed, O for open
+  			GripOption = Serial.read();			//send C for closed, O for open, U for up, D for down
   			manipulateGripper(GripOption);
   			taskComplete();
       break;
@@ -232,8 +239,8 @@ void loop()
           taskComplete();
       break;
       default: 
-     
       break;
+      
     }
     //taskComplete();
   } 
@@ -249,15 +256,15 @@ long checkIR (int pinNumIR)
 
 void manipulateGripper(char option)
 {
-	if (option == 'C')
+	if (option == CLOSE)
 	{
 		microServo.write(GRIP_GRAB);              //set gripper to grab victim
 	}
-	else if (option == 'O')
+	else if (option == OPEN)
 	{
 		microServo.write(GRIP_OPEN);              //set gripper to fully open
 	}
-	else if (option == 'U')
+	else if (option == UP)
 	{
 		for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
 		{
@@ -265,7 +272,7 @@ void manipulateGripper(char option)
 			delayMicroseconds(MICRO_DELAY);
 		}
 	}
-	else if (option = 'D')
+	else if (option == DOWN)
 	{
 		for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
 		{
@@ -509,10 +516,14 @@ void travelDistance(long numTicks)
   long count_R = Count2 + numTicks;
   //checkSensors();
   //int rightSet = Distance_US_R;
-  
+
+  int prevLeftDist = Distance_US_L, prevRightDist = Distance_US_R;
+  int dr, dl;
+  bool leftGap;
   //assume going forward
   
   int err,rtol,ltol;
+  int prevErr = 0;
   //int tol = 3;
   accelFromStop(SPEED,0);
   
@@ -521,10 +532,12 @@ void travelDistance(long numTicks)
   while ( Count1 < count_L && Count2 < count_R )
   {
     checkSensors();
-    
+    dl = abs(Distance_US_L - prevLeftDist);
+    dr = abs(Distance_US_R - prevRightDist);
+    leftGap = dl > 254;  //approximately 10 inches in mm, refactor later    
     //check error
     //err = rightSet - Distance_US_R;
-    if (useRight)
+    if (useRight || leftGap)
     {
       err = US_HALL_THRESHOLD - Distance_US_R;
       if( err > 0)
@@ -536,7 +549,7 @@ void travelDistance(long numTicks)
         //ltol = 0;
 
         //first change
-        ltol = KP*err;
+        ltol = err/KP_INV;
         rtol = 0;
 
         //second change
@@ -553,7 +566,7 @@ void travelDistance(long numTicks)
 
         //first change
         ltol = 0;
-        rtol = -1*KP*err;
+        rtol = -1*err/KP_INV;
 
         //2nd change
         //ltol = 0;
@@ -577,7 +590,7 @@ void travelDistance(long numTicks)
         //ltol = KP*err;
 
         //first change
-        rtol = KP*err;
+        rtol = err/KP_INV;
         ltol = 0;
       }
       else if(err < 0)
@@ -590,14 +603,19 @@ void travelDistance(long numTicks)
 
         //first change
         rtol = 0;
-        ltol = -1*KP*err;
+        ltol = -1*err/KP_INV;
       }
       else
       {
         rtol = 0;
         ltol = 0;
       }
+
+      prevLeftDist = Distance_US_L; 
+      prevRightDist = Distance_US_R;
+      prevErr = err;
     }
+    //end while loop
     
     //mtr_ctrl.setM1Speed(SPEED+tol);
     if (Distance_US_F > US_DANGER_THRESHOLD)
