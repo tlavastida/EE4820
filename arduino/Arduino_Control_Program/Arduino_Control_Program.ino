@@ -40,10 +40,10 @@ const char RECOVER = 'R';
 const char MANIPULATE = 'M';
 
 //for gripper commands
-const char OPEN = 'O';
-const char CLOSE = 'C';
-const char UP = 'U';
-const char DOWN = 'D';
+//const char OPEN = 'O';
+//const char CLOSE = 'C';
+//const char UP = 'U';
+//const char DOWN = 'D';
 
 //Motor speeds
 const int STOP = 0;  
@@ -79,7 +79,7 @@ const int DIG_PIN_DIR_2 = 36;             //requires digital pin (chip2)
 //*********************************************************************************
 
 //Time delays for gripper movement
-const int TIME_DELAY = 20;				//ms, used for delay between movements of gripper
+const int TIME_DELAY = 5;				//ms, used for delay between movements of gripper
 const int MICRO_DELAY = 500;			//microseconds, used to slow the movement of the gripper
 
 //Angle values for gripper
@@ -110,8 +110,8 @@ long pulseWidth,cm,mm;                        //Added mm in case we use instead 
 volatile long Distance_US_L,Distance_US_R,Distance_US_F; 
 
 //Variables for LS7184 chips
-volatile long Count1 = 0;                             //tick count chip 1
-volatile long Count2 = 0;                             //tick count chip 2
+volatile long Count_Encoder_Left = 0;                             //tick count chip 1
+volatile long Count_Encoder_Right = 0;                             //tick count chip 2
 
 //Variables for encoders 
 const int CONV_FACTOR = 52;                   	//counts per cm, 13 for cm 33 for in at 1x resolution, modified to 4x
@@ -133,16 +133,21 @@ volatile long US_DANGER_THRESHOLD;        	//Volatile but treat as a constant
 
 //Options to manipulate gripper
 volatile char GripOption;
+volatile int GripPosition;
+volatile int WristPosition;
 
-
+//Variables for serial
+char Buffer[128]; 
 
 //setup servo objects and set initial position
 void setup()
 { 
   microServo.attach(MICRO_SERVOPIN);
   microServo.write(GRIP_CLOSED);        // sets the gripper servo position to closed 
+  GripPosition = GRIP_CLOSED;
   largeServo.attach(LARGE_SERVOPIN);
   largeServo.write(WRIST_PICKUP);     // sets the wrist servo position to travel position
+  WristPosition = WRIST_PICKUP;
   pinMode(DIG_PIN_CLK_1,INPUT);
   pinMode(DIG_PIN_DIR_1,INPUT);
   attachInterrupt(digitalPinToInterrupt(DIG_PIN_CLK_1),encoderInterrupt1,RISING);
@@ -204,9 +209,11 @@ void loop()
       //delay(200);
   }
   
-  
+  microServo.write(GripPosition);
+  //largeServo.write(WristPosition);
  if(Serial.available() > 0)
   {
+    delayMicroseconds(MICRO_DELAY);
     instruction = Serial.read();
     switch (instruction) {
       case GO:
@@ -256,15 +263,17 @@ long checkIR (int pinNumIR)
 
 void manipulateGripper(char option)
 {
-	if (option == CLOSE)
+	if (option == 'C')
 	{
-		microServo.write(GRIP_GRAB);              //set gripper to grab victim
+		//microServo.write(GRIP_GRAB);              //set gripper to grab victim
+    GripPosition = GRIP_GRAB;
 	}
-	else if (option == OPEN)
+	else if (option == 'O')
 	{
-		microServo.write(GRIP_OPEN);              //set gripper to fully open
+		//microServo.write(GRIP_OPEN);              //set gripper to fully open
+    GripPosition = GRIP_OPEN;
 	}
-	else if (option == UP)
+	else if (option == 'U')
 	{
 		for (int i=WRIST_LOWER;i>WRIST_PICKUP;i=i-1)
 		{
@@ -272,7 +281,7 @@ void manipulateGripper(char option)
 			delayMicroseconds(MICRO_DELAY);
 		}
 	}
-	else if (option == DOWN)
+	else if (option == 'D')
 	{
 		for (int i=WRIST_PICKUP;i<WRIST_LOWER;i=i+1)
 		{
@@ -349,13 +358,13 @@ long checkUS (int pinNumUS)
  //Interrupt routine for LS7184 chip 1 - Code based on ref 4
 void encoderInterrupt1()
 {
-  Count1 = digitalRead(DIG_PIN_DIR_1) ? Count1 + 1: Count1 - 1;
+  Count_Encoder_Left = digitalRead(DIG_PIN_DIR_1) ? Count_Encoder_Left + 1: Count_Encoder_Left - 1;
 }
 
 //Interrupt routine for LS7184 chip 2 - Code based on ref 4
 void encoderInterrupt2()
 {
-  Count2 = digitalRead(DIG_PIN_DIR_2) ? Count2 + 1: Count2 - 1;
+  Count_Encoder_Right = digitalRead(DIG_PIN_DIR_2) ? Count_Encoder_Right + 1: Count_Encoder_Right - 1;
 }
 
 void checkSensors()
@@ -370,57 +379,72 @@ void checkSensors()
 //Used Ref 7 for example sprintf code
 void printSensorValues()
 {
-  char buffer[128];    //2 ints,5 longs,49 chars
-  //sprintf(buffer, "IR_L:%d,IR_R:%d,US_L:%d,US_R:%d,US_F:%d,Encoder1:%d,Encoder2:%d\n",Distance_IR_L,Distance_IR_R,Distance_US_L,Distance_US_R,Distance_US_F,Count1,Count2);
-  sprintf(buffer, "Encoder1:%d,Encoder2:%d\n",Count1,Count2); //We can use this if we only want to send encoder counts
-  Serial.print(buffer);
+  //char buffer[128];    //2 ints,5 longs,49 chars
+  //sprintf(buffer, "IR_L:%d,IR_R:%d,US_L:%d,US_R:%d,US_F:%d,Encoder1:%d,Encoder2:%d\n",Distance_IR_L,Distance_IR_R,Distance_US_L,Distance_US_R,Distance_US_F,Count_Encoder_Left,Count_Encoder_Right);
+  sprintf(Buffer, "Encoder1:%d,Encoder2:%d\n",Count_Encoder_Left,Count_Encoder_Right); //We can use this if we only want to send encoder counts
+  Serial.print(Buffer);
 }
 
 void taskComplete()
 {
-  char buffer[128];  
-  sprintf(buffer,"TaskComplete:%c\n",'Y');
-  Serial.print(buffer);
+  //char buffer[128];  
+  sprintf(Buffer,"TaskComplete:%c\n",'Y');
+  Serial.print(Buffer);
 }
 
 void turn(long numTurns,char turnDirection)
 {
-  long count_L;// = Count1 + TURN_TICK_COUNT;
-  long count_R;// = Count2 + TURN_TICK_COUNT;
+  long count_L;// = Count_Encoder_Left + TURN_TICK_COUNT;
+  long count_R;// = Count_Encoder_Right + TURN_TICK_COUNT;
+  long right_turn_adjust = 300;  //for variations in encoder readings
+  long left_turn_adjust = 170;   //for variations in encoder readings
+  
   mtr_ctrl.setM1Speed(STOP);
   mtr_ctrl.setM2Speed(STOP);
-  for (int i=0;i<numTurns;i=i+1)
+
+  switch (turnDirection) 
   {
-    if (turnDirection == 'L')
+    case 'L':
     {
-      count_L = Count1 + TURN_TICK_COUNT;
-      count_R = Count2 - TURN_TICK_COUNT; 
-      accelFromStop(SPEED,2); //left
-      while ((Count1 < count_L)&&(Count2 > count_R))
+      for (int i=0;i<numTurns;i=i+1)
       {
-        mtr_ctrl.setM1Speed(SPEED);
-        mtr_ctrl.setM2Speed(-1*SPEED);
+        count_L = Count_Encoder_Left - (TURN_TICK_COUNT - left_turn_adjust);
+        count_R = Count_Encoder_Right + (TURN_TICK_COUNT - left_turn_adjust); 
+        accelFromStop(SPEED,2); //left
+        //while ((Count_Encoder_Left < count_L)&&(Count_Encoder_Right > count_R))
+        while( Count_Encoder_Left > count_L  && Count_Encoder_Right < count_R )  //first change/idea
+        {
+          mtr_ctrl.setM1Speed(SPEED);
+          mtr_ctrl.setM2Speed(-1*SPEED);
+        }
+        mtr_ctrl.setM1Speed(STOP);
+        mtr_ctrl.setM2Speed(STOP);
       }
-      mtr_ctrl.setM1Speed(STOP);
-      mtr_ctrl.setM2Speed(STOP);
+      break;
     }
-    else if (turnDirection == 'R')
+    case 'R':
     {
-      count_L = Count1 - TURN_TICK_COUNT;
-      count_R = Count2 + TURN_TICK_COUNT;
-      accelFromStop(SPEED,3); //right
-      while ((Count1 > count_L)&&(Count2 < count_R))
+      for (int i=0; i<numTurns;i=i+1)
       {
-        mtr_ctrl.setM1Speed(-1*SPEED);
-        mtr_ctrl.setM2Speed(SPEED);
+        count_L = Count_Encoder_Left + (TURN_TICK_COUNT - right_turn_adjust);
+        count_R = Count_Encoder_Right - (TURN_TICK_COUNT - right_turn_adjust);
+        accelFromStop(SPEED,3); //right
+        //while ((Count_Encoder_Left > count_L)&&(Count_Encoder_Right < count_R))
+        while( Count_Encoder_Left < count_L  && Count_Encoder_Right > count_R )  //first change/idea
+        {
+          mtr_ctrl.setM1Speed(-1*SPEED);
+          mtr_ctrl.setM2Speed(SPEED);
+        }
+        mtr_ctrl.setM1Speed(STOP);
+        mtr_ctrl.setM2Speed(STOP);
       }
-      mtr_ctrl.setM1Speed(STOP);
-      mtr_ctrl.setM2Speed(STOP);
+      break;
     }
-    else 
+    default:
     {
       mtr_ctrl.setM1Speed(STOP);
       mtr_ctrl.setM2Speed(STOP);
+      break;
     }
   }
 }
@@ -447,12 +471,12 @@ void acquireTarget()
     mtr_ctrl.setM1Speed(STOP);
     mtr_ctrl.setM2Speed(STOP);
     //need to recover from here, back up slowly, should check sensors
-    long count_L = Count1 + recoveryTickCount;
-    long count_R = Count2 + recoveryTickCount;
+    long count_L = Count_Encoder_Left + recoveryTickCount;
+    long count_R = Count_Encoder_Right + recoveryTickCount;
     //This may need to be checked to see if works, going from stop to slow speed
     accelFromStop(SLOW,0); //forward
     //Above may need to be checked to see if works, going from stop to slow speed
-    while ((Count1 < count_L) && (Count2 < count_R)&&(dangerZoneReached==false))
+    while ((Count_Encoder_Left < count_L) && (Count_Encoder_Right < count_R)&&(dangerZoneReached==false))
     {
       checkSensors();
       if ((Distance_US_F > US_DANGER_THRESHOLD) && (Distance_US_L > US_DANGER_THRESHOLD) && (Distance_US_R > US_DANGER_THRESHOLD))
@@ -512,14 +536,14 @@ void acquireTarget()
  
 void travelDistance(long numTicks)
 {
-  long count_L = Count1 + numTicks;
-  long count_R = Count2 + numTicks;
+  long count_L = Count_Encoder_Left + numTicks;
+  long count_R = Count_Encoder_Right + numTicks;
   //checkSensors();
   //int rightSet = Distance_US_R;
 
   int prevLeftDist = Distance_US_L, prevRightDist = Distance_US_R;
   int dr, dl;
-  bool leftGap;
+  bool leftGap = false;
   //assume going forward
   
   int err,rtol,ltol;
@@ -529,12 +553,13 @@ void travelDistance(long numTicks)
   
   bool useRight = Distance_US_L > (2*US_HALL_THRESHOLD);
   
-  while ( Count1 < count_L && Count2 < count_R )
+  while ( Count_Encoder_Left < count_L && Count_Encoder_Right < count_R )
   {
     checkSensors();
     dl = abs(Distance_US_L - prevLeftDist);
     dr = abs(Distance_US_R - prevRightDist);
-    leftGap = dl > 254;  //approximately 10 inches in mm, refactor later    
+	//if leftGap becomes true then hold its value to true
+    leftGap = dl > 254 || leftGap;  //approximately 10 inches in mm, refactor later    
     //check error
     //err = rightSet - Distance_US_R;
     if (useRight || leftGap)
