@@ -63,11 +63,11 @@ void loop()
       Distance_US_L = checkUS(DIG_PIN_US_L);
       Distance_US_R = checkUS(DIG_PIN_US_R);
       
-      Distance = (Distance_US_L + Distance_US_R);
-      US_HALL_THRESHOLD = Distance/3;
-      US_DANGER_THRESHOLD = Distance/5; 
+      Distance = (Distance_US_L + Distance_US_R + 153);
+      US_HALL_THRESHOLD = Distance/2 - 76;
+      US_DANGER_THRESHOLD = Distance/4 - 76; 
       
-    sprintf(Buffer, "US_HALL_THRESHOLD:%d,US_DANGER_THRESHOLD:%d\n",US_HALL_THRESHOLD,US_DANGER_THRESHOLD);
+    sprintf(Buffer, "US_HALL_THRESHOLD:%ld, US_DANGER_THRESHOLD:%ld\n",US_HALL_THRESHOLD,US_DANGER_THRESHOLD);
     Serial.print(Buffer);
     
       AtStart = false;
@@ -125,10 +125,11 @@ void checkSensors()
 void printSensorValues()
 {
   //char buffer[128];    //2 ints,5 longs,49 chars
-  sprintf(Buffer, "IR_L:%d,IR_R:%d,US_L:%d,US_R:%d,US_F:%d\n",Distance_IR_L,Distance_IR_R,Distance_US_L,Distance_US_R,Distance_US_F);
+  snprintf(Buffer, 128, "IR_L:%ld, IR_R:%ld, US_L:%ld, US_R:%ld, US_F:%ld\n",Distance_IR_L, Distance_IR_R, Distance_US_L, Distance_US_R, Distance_US_F);
   //sprintf(Buffer, "Encoder1:%d,Encoder2:%d\n",Count_Encoder_Left,Count_Encoder_Right); //We can use this if we only want to send encoder counts
   Serial.print(Buffer);
 }
+
 
 
 

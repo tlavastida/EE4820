@@ -47,7 +47,7 @@ const char MANIPULATE = 'M';
 
 //Motor speeds
 const int STOP = 0;  
-const int SLOW = 40;     
+const int SLOW = 70;     
 const int SPEED = 80;
 
 //Controls
@@ -465,7 +465,7 @@ void acquireTarget()
   {
 	bool dangerZoneReached = false;  
     checkSensors();
-    if ((Distance_IR_L < DANGER_ZONE) || (Distance_IR_R < DANGER_ZONE))
+    /*if ((Distance_IR_L < DANGER_ZONE) || (Distance_IR_R < DANGER_ZONE))
     {
     //STOP
     mtr_ctrl.setM1Speed(STOP);
@@ -492,7 +492,7 @@ void acquireTarget()
       }
     }
     }
-    else if ((abs(Distance_IR_L - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_R - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_L-Distance_IR_R) <= THRESHOLD))
+    else*/ if ((abs(Distance_IR_L - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_R - PICKUP_VICTIM_THRESHOLD)<=PICKUP_TOLERANCE) && (abs(Distance_IR_L-Distance_IR_R) <= THRESHOLD))
     {
       //Stop and pick up target
       mtr_ctrl.setM1Speed(STOP);
