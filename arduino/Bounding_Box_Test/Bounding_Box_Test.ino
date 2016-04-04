@@ -44,6 +44,9 @@ char Buffer[128];
 volatile long US_HALL_THRESHOLD;          //Volatile but treat as a constant
 volatile long US_DANGER_THRESHOLD;          //Volatile but treat as a constant
 
+//loop control
+volatile int LoopControl = 0;				//temp variable for testing
+
 //setup servo objects and set initial position
 void setup()
 { 
@@ -55,28 +58,32 @@ void setup()
 //repeat test process 
 void loop()
 {
-  if (AtStart)
-  {
-    //Set Threshold to maintain distance from objects
-    //Take US L/R measurements at start
-      
-      Distance_US_L = checkUS(DIG_PIN_US_L);
-      Distance_US_R = checkUS(DIG_PIN_US_R);
-      
-      Distance = (Distance_US_L + Distance_US_R + 153);
-      US_HALL_THRESHOLD = Distance/2 - 76;
-      US_DANGER_THRESHOLD = Distance/4 - 76; 
-      
-    sprintf(Buffer, "US_HALL_THRESHOLD:%ld, US_DANGER_THRESHOLD:%ld\n",US_HALL_THRESHOLD,US_DANGER_THRESHOLD);
-    Serial.print(Buffer);
-    
-      AtStart = false;
+	while (LoopControl < 100)
+	{
+	  if (AtStart)
+	  {
+		//Set Threshold to maintain distance from objects
+		//Take US L/R measurements at start
+		  
+		  Distance_US_L = checkUS(DIG_PIN_US_L);
+		  Distance_US_R = checkUS(DIG_PIN_US_R);
+		  
+		  Distance = (Distance_US_L + Distance_US_R + 153);
+		  US_HALL_THRESHOLD = Distance/2 - 76;
+		  US_DANGER_THRESHOLD = Distance/4 - 76; 
+		  
+		sprintf(Buffer, "US_HALL_THRESHOLD:%ld, US_DANGER_THRESHOLD:%ld\n",US_HALL_THRESHOLD,US_DANGER_THRESHOLD);
+		Serial.print(Buffer);
+		
+		  AtStart = false;
 
-  }
-  checkSensors();
-  delay(1);
-  printSensorValues();
-  delay(2000);
+	  }
+	  checkSensors();
+	  //delay(1);
+	  printSensorValues();
+	  //delay(2000);
+	  LoopControl = LoopControl + 1;
+	}
 }
 
 long checkIR (int pinNumIR)
@@ -84,9 +91,9 @@ long checkIR (int pinNumIR)
   analogValue = analogRead(pinNumIR);                       //Read current analog value from pin
   //distanceValue = (400000-(42*analogValue))/(10*analogValue);   //conversion based on one from ref //Due conversion
   distanceValue = (264000-(42*analogValue))/(10*analogValue);   //conversion based on one from ref //Mega conversion
-  Serial.print(pinNumIR);
-  Serial.print(" ");
-  Serial.println(distanceValue);
+//  Serial.print(pinNumIR);
+//  Serial.print(" ");
+//  Serial.println(distanceValue);
   return distanceValue;                                 //mm
 }
 
@@ -105,9 +112,9 @@ long checkUS (int pinNumUS)
   //mm = (pulseWidth*10)/88;                      // Check using mm instead of cm //Due
   mm = (pulseWidth*10)/58;                      // Check using mm instead of cm //Mega
   //return cm;
-  Serial.print(pinNumUS);
-  Serial.print(" ");
-  Serial.println(mm);
+//  Serial.print(pinNumUS);
+//  Serial.print(" ");
+//  Serial.println(mm);
  //Serial.print(" ");
   return mm;
 }

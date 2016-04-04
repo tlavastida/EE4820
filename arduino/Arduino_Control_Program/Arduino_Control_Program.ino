@@ -49,6 +49,8 @@ const char MANIPULATE = 'M';
 const int STOP = 0;  
 const int SLOW = 70;     
 const int SPEED = 80;
+const int TURN_SPEED = 130;		//added a faster speed to test zero turn
+const int LEFT_MOTOR_ADJ = -8;
 
 //Controls
 const int KP_INV = 10; //Kp = 1/10 so Kp^-1 = 10
@@ -184,8 +186,8 @@ void loop()
       //US_DANGER_THRESHOLD = Distance/2; 
       
       Distance = (Distance_US_L + Distance_US_R);
-      US_HALL_THRESHOLD = Distance/3;
-      US_DANGER_THRESHOLD = Distance/5; 
+      US_HALL_THRESHOLD =   6;//Distance/3;   //changed to cm, set value
+      US_DANGER_THRESHOLD = 4; //Distance/5; //changed to cm, set value 
       //delay(3000);      
       
       //Distance = 121;   //cm, 4 feet
@@ -348,13 +350,13 @@ long checkUS (int pinNumUS)
   digitalWrite(pinNumUS,LOW);                 // set pin back to low to ready for return pulse
   pinMode(pinNumUS,INPUT);                    // change pin to Input mode for return pulse
   pulseWidth = pulseIn(pinNumUS,HIGH,18500);    // wait for return pulse. Timeout after 18.5 milliseconds
-  //cm = pulseWidth/88;                       // Convert to centimeters, use 58 for Mega, 53 for Due, jk it's 88 for Due
+  cm = pulseWidth/58;                       // Convert to centimeters, use 58 for Mega, 53 for Due, jk it's 88 for Due
   //mm = (pulseWidth*10)/88;                      // Check using mm instead of cm //Due
-  mm = (pulseWidth*10)/58;                      // Check using mm instead of cm //Mega
-  //return cm;
+  //mm = (pulseWidth*10)/58;                      // Check using mm instead of cm //Mega
+  return cm;
   //Serial.print(mm);
- //Serial.print(" ");
-  return mm;
+  //Serial.print(" ");
+  //return mm;
 }
  
  //Interrupt routine for LS7184 chip 1 - Code based on ref 4
@@ -398,8 +400,8 @@ void turn(long numTurns,char turnDirection)
 {
   long count_L;// = Count_Encoder_Left + TURN_TICK_COUNT;
   long count_R;// = Count_Encoder_Right + TURN_TICK_COUNT;
-  long right_turn_adjust = 300;  //for variations in encoder readings
-  long left_turn_adjust = 170;   //for variations in encoder readings
+  long right_turn_adjust = -236;  //for variations in encoder readings //-240 old
+  long left_turn_adjust = 0;   //for variations in encoder readings   // 4 old
   
   mtr_ctrl.setM1Speed(STOP);
   mtr_ctrl.setM2Speed(STOP);
@@ -410,14 +412,14 @@ void turn(long numTurns,char turnDirection)
     {
       for (int i=0;i<numTurns;i=i+1)
       {
-        count_L = Count_Encoder_Left - (TURN_TICK_COUNT - left_turn_adjust);
-        count_R = Count_Encoder_Right + (TURN_TICK_COUNT - left_turn_adjust); 
+        count_L = Count_Encoder_Left - (TURN_TICK_COUNT + left_turn_adjust);
+        count_R = Count_Encoder_Right + (TURN_TICK_COUNT + left_turn_adjust); 
         accelFromStop(SPEED,2); //left
         //while ((Count_Encoder_Left < count_L)&&(Count_Encoder_Right > count_R))
         while( Count_Encoder_Left > count_L  && Count_Encoder_Right < count_R )  //first change/idea
         {
-          mtr_ctrl.setM1Speed(SPEED);
-          mtr_ctrl.setM2Speed(-1*SPEED);
+          mtr_ctrl.setM1Speed(TURN_SPEED);			//switching to turn speed for testing, change 1
+          mtr_ctrl.setM2Speed(-1*(TURN_SPEED+LEFT_MOTOR_ADJ));
         }
         mtr_ctrl.setM1Speed(STOP);
         mtr_ctrl.setM2Speed(STOP);
@@ -428,14 +430,14 @@ void turn(long numTurns,char turnDirection)
     {
       for (int i=0; i<numTurns;i=i+1)
       {
-        count_L = Count_Encoder_Left + (TURN_TICK_COUNT - right_turn_adjust);
-        count_R = Count_Encoder_Right - (TURN_TICK_COUNT - right_turn_adjust);
+        count_L = Count_Encoder_Left + (TURN_TICK_COUNT + right_turn_adjust);
+        count_R = Count_Encoder_Right - (TURN_TICK_COUNT + right_turn_adjust);
         accelFromStop(SPEED,3); //right
         //while ((Count_Encoder_Left > count_L)&&(Count_Encoder_Right < count_R))
         while( Count_Encoder_Left < count_L  && Count_Encoder_Right > count_R )  //first change/idea
         {
-          mtr_ctrl.setM1Speed(-1*SPEED);
-          mtr_ctrl.setM2Speed(SPEED);
+          mtr_ctrl.setM1Speed(-1*TURN_SPEED);			//switching to turn speed for testing, change 1
+          mtr_ctrl.setM2Speed(TURN_SPEED);				//switching to turn speed for testing, change 1
         }
         mtr_ctrl.setM1Speed(STOP);
         mtr_ctrl.setM2Speed(STOP);
@@ -535,6 +537,47 @@ void acquireTarget()
 	}
   }
 }
+
+void travelDistance_timed(long numTicks)
+{
+  checkSensors();
+  accelFromStop(SPEED,0);
+  mtr_ctrl.setM1Speed(SPEED);
+  mtr_ctrl.setM2Speed(SPEED + LEFT_MOTOR_ADJ);        //Change 1, remove later. Test using one motor
+  delay(5000);
+  mtr_ctrl.setM1Speed(STOP);
+  mtr_ctrl.setM2Speed(STOP);
+}
+
+void travelDistance_simple(long numTicks)
+{
+  long count_L = Count_Encoder_Left + numTicks;
+  long count_R = Count_Encoder_Right + numTicks;
+ 
+  
+  accelFromStop(SPEED,0);
+  
+  while ( Count_Encoder_Left < count_L && Count_Encoder_Right < count_R )
+  {
+    checkSensors();
+
+    if(Distance_US_F > US_DANGER_THRESHOLD)
+    {
+    
+      mtr_ctrl.setM1Speed(SPEED);
+      mtr_ctrl.setM2Speed(SPEED + LEFT_MOTOR_ADJ);        //Change 1, remove later. Test using one motor
+    
+    }
+    else
+    {
+      mtr_ctrl.setSpeeds(STOP,STOP);
+    }
+  }
+
+   //Stop at location
+   mtr_ctrl.setM1Speed(STOP);
+   mtr_ctrl.setM2Speed(STOP);
+} 
  
 void travelDistance(long numTicks)
 {
@@ -595,7 +638,7 @@ void travelDistance(long numTicks)
 	  {
 		
 		  mtr_ctrl.setM1Speed(SPEED + e_l*KP + de_l*KD);
-		  mtr_ctrl.setM2Speed(SPEED + e_r*KP + de_r*KD);
+		  mtr_ctrl.setM2Speed((SPEED + LEFT_MOTOR_ADJ) + e_r*KP + de_r*KD );				
 		
 	  }
 	  else
