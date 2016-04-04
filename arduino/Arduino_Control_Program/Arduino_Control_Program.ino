@@ -52,6 +52,8 @@ const int SPEED = 80;
 
 //Controls
 const int KP_INV = 10; //Kp = 1/10 so Kp^-1 = 10
+const int KP = 10;
+const int KD = 1;
 
 Servo microServo;   //create an servo object for the 9g FT-FS90MG micro servo
 Servo largeServo;   //create an servo object for the RobotGeek 180 degree servo
@@ -535,6 +537,92 @@ void acquireTarget()
 }
  
 void travelDistance(long numTicks)
+{
+  long count_L = Count_Encoder_Left + numTicks;
+  long count_R = Count_Encoder_Right + numTicks;
+  int prevLeftDist = Distance_US_L, prevRightDist = Distance_US_R;
+  int dr[4] = {0,0,0,0}, dl[4] = {0,0,0,0};
+
+  int e_r,e_l;
+  int e_r_prev = 0, e_l_prev = 0;
+  int de_l, de_r;
+  
+  //int prevErr = 0;
+  accelFromStop(SPEED,0);
+  
+  while ( Count_Encoder_Left < count_L && Count_Encoder_Right < count_R )
+  {
+	  checkSensors();
+	
+	  //compute derivatives
+	  dl[0] = Distance_US_L - prevLeftDist;
+    dr[0] = Distance_US_R - prevRightDist;
+	
+	  //here we do the filtering
+	  if (Distance_US_L > 3*US_HALL_THRESHOLD)
+	  {
+		  dl[0] = 0;
+	  }
+	  if (Distance_US_R > 3*US_HALL_THRESHOLD)
+	  {
+		  dr[0] = 0;
+	  }
+	  //once we figure that
+	  
+	  //compute errors
+	  e_r = (dr[0] + dr[1] + dr[2] + dr[3]) >> 2;
+	  e_l = (dl[0] + dl[1] + dl[2] + dl[3]) >> 2; //4th order avg
+
+    //e_r = (e_r >= 0) ? e_r : 0;
+    //e_l = (e_l >= 0) ? e_l : 0;
+
+    de_r = e_r - e_r_prev;
+    de_l = e_l - e_l_prev;
+  
+	  if(Distance_US_R <= US_DANGER_THRESHOLD)
+	  {
+		  e_r = (e_r > 0) ? 0 : e_r;
+		  e_l = (e_l < 0) ? 0 : e_l;
+	  }
+	
+	  if(Distance_US_L <= US_DANGER_THRESHOLD)
+	  {
+		  e_r = (e_r < 0) ? 0 : e_r;
+		  e_l = (e_r > 0) ? 0 : e_l;
+	  }
+	
+	  if(Distance_US_F > US_DANGER_THRESHOLD)
+	  {
+		
+		  mtr_ctrl.setM1Speed(SPEED + e_l*KP + de_l*KD);
+		  mtr_ctrl.setM2Speed(SPEED + e_r*KP + de_r*KD);
+		
+	  }
+	  else
+	  {
+		  mtr_ctrl.setSpeeds(STOP,STOP);
+	  }
+	
+	  //update vars
+	  prevLeftDist = Distance_US_L; 
+	  prevRightDist = Distance_US_R;
+
+    dl[1] = dl[0];
+    dl[2] = dl[1];
+    dl[3] = dl[2];
+
+    dr[1] = dr[0];
+    dr[2] = dr[1];
+    dr[3] = dr[2];
+
+  }
+
+   //Stop at location
+   mtr_ctrl.setM1Speed(STOP);
+   mtr_ctrl.setM2Speed(STOP);
+} 
+ 
+void travelDistance_old(long numTicks)
 {
   long count_L = Count_Encoder_Left + numTicks;
   long count_R = Count_Encoder_Right + numTicks;
