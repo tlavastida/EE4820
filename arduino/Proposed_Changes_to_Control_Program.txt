@@ -13,7 +13,19 @@ void adjust()		//removed inputs from original turn function
   long diff = Count_Encoder_Left + Count_Encoder_Right;		//Add the 2 together since one is negative and the other positive
   long tickAdjust = diff % TURN_TICK_COUNT;					//Remove turns from the difference, whatever is left we need to adjust
   int tickTol = 0;											//THIS WILL NEED TO BE ADJUSTED THROUGH TESTING
-  char adjustDirection = (tickAdjust > tickTol) ? 'L':'R'
+  char adjustDirection;
+  if (abs(tickAdjust) <= tickTol)
+  {
+	  adjustDirection = 'N';
+  }
+  else if (tickAdjust > tickTol) 
+  {
+	  adjustDirection = 'L';
+  }
+  else if (tickAdjust < tickTol)
+  {
+	  adjustDirection = 'R';
+  }
   
   mtr_ctrl.setM1Speed(STOP);
   mtr_ctrl.setM2Speed(STOP);
