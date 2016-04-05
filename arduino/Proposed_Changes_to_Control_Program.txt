@@ -1,0 +1,70 @@
+/*	SMS 4/5/16 11:27AM - ADDED ADJUST FUNCTION TO STRAIGHTEN OUT ROBOT AFTER MOVEMENTS
+*/
+
+//Proposed solution to straightening out: SMS 4/5/16 11:00am
+void adjust()		//removed inputs from original turn function
+{	
+  long count_L;// = Count_Encoder_Left + TURN_TICK_COUNT;
+  long count_R;// = Count_Encoder_Right + TURN_TICK_COUNT;
+  long right_turn_adjust = -236;  //for variations in encoder readings //-240 old
+  long left_turn_adjust = 0;   //for variations in encoder readings   // 4 old
+  
+  //These are added to original turn function SMS 4/5/16 11:16am
+  long diff = Count_Encoder_Left + Count_Encoder_Right;		//Add the 2 together since one is negative and the other positive
+  long tickAdjust = diff % TURN_TICK_COUNT;					//Remove turns from the difference, whatever is left we need to adjust
+  int tickTol = 0;											//THIS WILL NEED TO BE ADJUSTED THROUGH TESTING
+  char adjustDirection = (tickAdjust > tickTol) ? 'L':'R'
+  
+  mtr_ctrl.setM1Speed(STOP);
+  mtr_ctrl.setM2Speed(STOP);
+
+  switch (adjustDirection) 
+  {
+    case 'L':
+    {
+      for (int i=0;i<numTurns;i=i+1)
+      {
+        //count_L = Count_Encoder_Left - (TURN_TICK_COUNT + left_turn_adjust);			//SMS 4/5/16 11:18am commented out original lines
+        //count_R = Count_Encoder_Right + (TURN_TICK_COUNT + left_turn_adjust); 		//SMS 4/5/16 11:18am commented out original lines
+		count_L = Count_Encoder_Left - (tickAdjust + left_turn_adjust);					//SMS 4/5/16 11:18am changed TURN_TICK_COUNT to tickAdjust
+        count_R = Count_Encoder_Right + (tickAdjust + left_turn_adjust); 				//SMS 4/5/16 11:18am changed TURN_TICK_COUNT to tickAdjust
+        accelFromStop(SPEED,2); //left
+        //while ((Count_Encoder_Left < count_L)&&(Count_Encoder_Right > count_R))
+        while( Count_Encoder_Left > count_L  && Count_Encoder_Right < count_R )  //first change/idea
+        {
+          mtr_ctrl.setM1Speed(TURN_SPEED);      //switching to turn speed for testing, change 1
+          mtr_ctrl.setM2Speed(-1*(TURN_SPEED+LEFT_MOTOR_ADJ));
+        }
+        mtr_ctrl.setM1Speed(STOP);
+        mtr_ctrl.setM2Speed(STOP);
+      }
+      break;
+    }
+    case 'R':
+    {
+      for (int i=0; i<numTurns;i=i+1)
+      {
+        //count_L = Count_Encoder_Left + (TURN_TICK_COUNT + right_turn_adjust);			//SMS 4/5/16 11:18am commented out original lines
+        //count_R = Count_Encoder_Right - (TURN_TICK_COUNT + right_turn_adjust);		//SMS 4/5/16 11:18am commented out original lines
+		count_L = Count_Encoder_Left + (TURN_TICK_COUNT + right_turn_adjust);			//SMS 4/5/16 11:18am changed TURN_TICK_COUNT to tickAdjust
+        count_R = Count_Encoder_Right - (TURN_TICK_COUNT + right_turn_adjust);			//SMS 4/5/16 11:18am changed TURN_TICK_COUNT to tickAdjust
+        accelFromStop(SPEED,3); //right
+        //while ((Count_Encoder_Left > count_L)&&(Count_Encoder_Right < count_R))
+        while( Count_Encoder_Left < count_L  && Count_Encoder_Right > count_R )  //first change/idea
+        {
+          mtr_ctrl.setM1Speed(-1*TURN_SPEED);     //switching to turn speed for testing, change 1
+          mtr_ctrl.setM2Speed(TURN_SPEED);        //switching to turn speed for testing, change 1
+        }
+        mtr_ctrl.setM1Speed(STOP);
+        mtr_ctrl.setM2Speed(STOP);
+      }
+      break;
+    }
+    default:
+    {
+      mtr_ctrl.setM1Speed(STOP);
+      mtr_ctrl.setM2Speed(STOP);
+      break;
+    }
+  }
+}
