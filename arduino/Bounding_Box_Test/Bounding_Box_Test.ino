@@ -41,8 +41,11 @@ volatile bool AtStart = true;
 char Buffer[128]; 
 
 //Threshold variables
-volatile long US_HALL_THRESHOLD;          //Volatile but treat as a constant
-volatile long US_DANGER_THRESHOLD;          //Volatile but treat as a constant
+volatile long US_HALL_THRESHOLD = 60;          //Volatile but treat as a constant
+volatile long US_DANGER_THRESHOLD = 40;          //Volatile but treat as a constant
+volatile long US_DANGER_THRESHOLD_L = 60;          //Volatile but treat as a constant
+volatile long US_DANGER_THRESHOLD_R = 45;          //Volatile but treat as a constant
+volatile long US_DANGER_THRESHOLD_F = 70;        //Volatile but treat as a constant
 
 //loop control
 volatile int LoopControl = 0;				//temp variable for testing
@@ -58,32 +61,38 @@ void setup()
 //repeat test process 
 void loop()
 {
-	while (LoopControl < 100)
-	{
-	  if (AtStart)
-	  {
-		//Set Threshold to maintain distance from objects
-		//Take US L/R measurements at start
-		  
-		  Distance_US_L = checkUS(DIG_PIN_US_L);
-		  Distance_US_R = checkUS(DIG_PIN_US_R);
-		  
-		  Distance = (Distance_US_L + Distance_US_R + 153);
-		  US_HALL_THRESHOLD = Distance/2 - 76;
-		  US_DANGER_THRESHOLD = Distance/4 - 76; 
-		  
-		sprintf(Buffer, "US_HALL_THRESHOLD:%ld, US_DANGER_THRESHOLD:%ld\n",US_HALL_THRESHOLD,US_DANGER_THRESHOLD);
-		Serial.print(Buffer);
-		
-		  AtStart = false;
-
-	  }
+	//while (LoopControl < 100)
+	//{
+//	  if (AtStart)
+//	  {
+//		//Set Threshold to maintain distance from objects
+//		//Take US L/R measurements at start
+//		  
+//		  Distance_US_L = checkUS(DIG_PIN_US_L);
+//		  Distance_US_R = checkUS(DIG_PIN_US_R);
+//		  
+//		  Distance = (Distance_US_L + Distance_US_R + 153);
+//		  US_HALL_THRESHOLD = 60;
+//		  US_DANGER_THRESHOLD = 40; 
+//		  
+//		sprintf(Buffer, "US_HALL_THRESHOLD:%ld, US_DANGER_THRESHOLD:%ld\n",US_HALL_THRESHOLD,US_DANGER_THRESHOLD);
+//		Serial.print(Buffer);
+//		
+//		  AtStart = false;
+//
+//	  }
 	  checkSensors();
 	  //delay(1);
-	  printSensorValues();
-	  //delay(2000);
-	  LoopControl = LoopControl + 1;
-	}
+    if ((Distance_US_F < US_DANGER_THRESHOLD_F)||(Distance_US_L < US_DANGER_THRESHOLD_L)||(Distance_US_R < US_DANGER_THRESHOLD_R))
+    {
+      printSensorValues();
+      Serial.println("Danger, Danger Will Robinson");
+      delay(3000);
+    }
+    printSensorValues();
+	  delay(3000);
+	  //LoopControl = LoopControl + 1;
+	//}
 }
 
 long checkIR (int pinNumIR)
