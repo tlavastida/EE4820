@@ -47,14 +47,15 @@ const char MANIPULATE = 'M';
 
 //Motor speeds
 const int STOP = 0;  
-const int SLOW = 70;     
-const int SPEED = 80;
+const int SLOW = 35;     
+const int SPEED = 90;
 const int TURN_SPEED = 130;		//added a faster speed to test zero turn
-const int LEFT_MOTOR_ADJ = -8;
+const int LEFT_MOTOR_ADJ = -6;
 
 //Controls
 const int KP_INV = 10; //Kp = 1/10 so Kp^-1 = 10
-const int KP = 10;
+const int KPL = 80;
+const int KPR = 80;
 const int KD = 1;
 
 Servo microServo;   //create an servo object for the 9g FT-FS90MG micro servo
@@ -133,7 +134,7 @@ volatile bool AtStart = true;
 
 //Threshold variables
 volatile long US_HALL_THRESHOLD;        	//Volatile but treat as a constant
-volatile long US_DANGER_THRESHOLD;        	//Volatile but treat as a constant
+const long US_DANGER_THRESHOLD = 8;        	//Volatile but treat as a constant
 
 //Options to manipulate gripper
 volatile char GripOption;
@@ -187,7 +188,7 @@ void loop()
       
       Distance = (Distance_US_L + Distance_US_R);
       US_HALL_THRESHOLD =   6;//Distance/3;   //changed to cm, set value
-      US_DANGER_THRESHOLD = 4; //Distance/5; //changed to cm, set value 
+      //US_DANGER_THRESHOLD = 4; //Distance/5; //changed to cm, set value 
       //delay(3000);      
       
       //Distance = 121;   //cm, 4 feet
@@ -581,6 +582,12 @@ void travelDistance_simple(long numTicks)
  
 void travelDistance(long numTicks)
 {
+
+  int dangerCounter = 0;
+  int dangerCountThresh = 3;
+
+  int rightSpeed = STOP,leftSpeed = STOP;
+  
   long count_L = Count_Encoder_Left + numTicks;
   long count_R = Count_Encoder_Right + numTicks;
   int prevLeftDist = Distance_US_L, prevRightDist = Distance_US_R;
@@ -618,14 +625,11 @@ void travelDistance(long numTicks)
 
     //e_r = (e_r >= 0) ? e_r : 0;
     //e_l = (e_l >= 0) ? e_l : 0;
-
-    de_r = e_r - e_r_prev;
-    de_l = e_l - e_l_prev;
   
 	  if(Distance_US_R <= US_DANGER_THRESHOLD)
 	  {
 		  e_r = (e_r > 0) ? 0 : e_r;
-		  e_l = (e_l < 0) ? 0 : e_l;
+		  e_l = (e_l <  0) ? 0 : e_l;
 	  }
 	
 	  if(Distance_US_L <= US_DANGER_THRESHOLD)
@@ -634,17 +638,29 @@ void travelDistance(long numTicks)
 		  e_l = (e_r > 0) ? 0 : e_l;
 	  }
 	
-	  if(Distance_US_F > US_DANGER_THRESHOLD)
+	  if(Distance_US_F > US_DANGER_THRESHOLD || Distance_US_F == 0)
 	  {
-		
-		  mtr_ctrl.setM1Speed(SPEED + e_l*KP + de_l*KD);
-		  mtr_ctrl.setM2Speed((SPEED + LEFT_MOTOR_ADJ) + e_r*KP + de_r*KD );				
+      dangerCounter = 0;
+      rightSpeed = SPEED - e_r*KPR;
+      leftSpeed = (SPEED + LEFT_MOTOR_ADJ) - e_l*KPL;
+
+      rightSpeed = (rightSpeed <= SLOW) ? SLOW : rightSpeed;
+      leftSpeed = (leftSpeed <= SLOW) ? SLOW : leftSpeed;
 		
 	  }
 	  else
 	  {
-		  mtr_ctrl.setSpeeds(STOP,STOP);
+      dangerCounter += 1;
+		  if(dangerCounter >= dangerCountThresh)
+      {
+		    leftSpeed = STOP;
+        rightSpeed = STOP;
+      }
 	  }
+
+
+    mtr_ctrl.setM1Speed(rightSpeed);
+    mtr_ctrl.setM2Speed(leftSpeed);
 	
 	  //update vars
 	  prevLeftDist = Distance_US_L; 
