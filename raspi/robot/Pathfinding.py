@@ -135,6 +135,7 @@ class PathFinder():
         facing = ""
         direction = ""
 
+        facing = initfacing
         for index in range(len(self.corners)-1):
             distance1 = abs(self.corners[index][1] - self.corners[index+1][1]) #horizontal distance
             distance2 = abs(self.corners[index][0] - self.corners[index+1][0]) #vertical distance
@@ -143,7 +144,6 @@ class PathFinder():
             #find initial direction robot is facing#
             ########################################
 
-            facing = initfacing
             #if facing == "":
             #    if self.corners[1][0] - self.corners[0][0] > 0:
             #        facing = "South"

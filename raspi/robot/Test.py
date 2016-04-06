@@ -224,7 +224,7 @@ def test3():
     testing = PathFinder(getgrid)
     #red to start
     findrstart = testing.findCorners((22,22),(22,1))
-    movesrstart = testing.actionList("East")
+    movesrstart = testing.actionList('East')
     print("red to start: ", movesrstart)
 
     testing = PathFinder(getgrid)
@@ -233,11 +233,25 @@ def test3():
     movesystart = testing.actionList("North")
     print("yellow to start: ", movesystart)
 
+def test():
+    #get grid class
+    gridclass = gridCourse(None)
+
+    #get grid
+    getgrid = gridclass.getgridmap() 
+
+    #get pathfinder class
+    testing = PathFinder(getgrid)
+    #start to first loc
+    find1 = testing.findCorners((22,1), (19,22))
+    moves1 = testing.actionList("East")
+    print("start to first: ", moves1)
+
 """
 #pseudocode for actual run
 def runCourse():
-    victimloc = [(19,22), (16,2), (13,2), (4,22), (1,19), (4,1)]
-    dropoffs = {'red': (22,22), 'yellow': (19,2)}
+    victimloc = [(19,22), (16,1), (13,1), (4,22), (1,19), (4,1)]
+    dropoffs = {'red': (22,22), 'yellow': (19,1)}
     startpos = (22,1)
 
     #need a victim count
@@ -277,6 +291,6 @@ def runCourse():
 #timing
 start = time.clock()
 #test2()
-test3()
+test()
 end = time.clock()
 print(end-start)
