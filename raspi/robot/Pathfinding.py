@@ -127,7 +127,7 @@ class PathFinder():
     ####################################################
     # def nextAction(self, start, target):
 
-    def actionList(self):
+    def actionList(self, initfacing):
         if not self.corners:
             raise ValueError('Need to compute a path first!')
         
@@ -142,16 +142,19 @@ class PathFinder():
             ########################################
             #find initial direction robot is facing#
             ########################################
-            if facing == "":
-                if self.corners[1][0] - self.corners[0][0] > 0:
-                    facing = "South"
-                elif self.corners[1][0] - self.corners[0][0] < 0:
-                    facing = "North"
-                elif self.corners[1][1] - self.corners[0][1] > 0:
-                    facing = "East"
-                else:
-                    facing = "West"
-                #print("initial facing: ", facing)
+
+            facing = initfacing
+            #if facing == "":
+            #    if self.corners[1][0] - self.corners[0][0] > 0:
+            #        facing = "South"
+            #    elif self.corners[1][0] - self.corners[0][0] < 0:
+            #        facing = "North"
+            #    elif self.corners[1][1] - self.corners[0][1] > 0:
+            #        facing = "East"
+            #    else:
+            #        facing = "West"
+            #    #print("initial facing: ", facing)
+
 
             #######################
             #which direction to go#
@@ -255,7 +258,7 @@ class PathFinder():
             else:
                 move_list.append('Stop')
 
-        return move_list, facing
+        return move_list
 
     ########################################
     #convert encoder coord to virtual coord# 

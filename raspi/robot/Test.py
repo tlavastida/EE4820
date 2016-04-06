@@ -16,19 +16,19 @@ def test2():
     testing = PathFinder(getgrid)
     #start to first loc
     find1 = testing.findCorners((22,1), (19,22))
-    moves1 = testing.actionList()
+    moves1 = testing.actionList("East")
     print("start to first: ", moves1)
 
     testing = PathFinder(getgrid)
     #firstloc to red dropoff
     find1r = testing.findCorners((19,22),(22,22))
-    moves1r = testing.actionList()
+    moves1r = testing.actionList("West")
     print("first to red: ", moves1r)
 
     testing= PathFinder(getgrid)
     #firstloc to yellow dropoff
     find1y = testing.findCorners((19,22),(19,1))
-    moves1y = testing.actionList()
+    moves1y = testing.actionList("West")
     print("first to yellow: ", moves1y)
 
     #print(getgrid)
@@ -38,31 +38,31 @@ def test2():
     testing = PathFinder(getgrid)
     #firstloc to secondloc
     find2 = testing.findCorners((19,22), (16,1))
-    moves2 = testing.actionList()
+    moves2 = testing.actionList("West")
     print("first to second: ", moves2)
 
     testing = PathFinder(getgrid)
     #red to secondloc
     findr2 = testing.findCorners((22,22),(16,1))
-    movesr2 = testing.actionList()
+    movesr2 = testing.actionList("West")
     print("red to second: ", movesr2)
 
     testing = PathFinder(getgrid)
     #yellow to secondloc
     findy2 = testing.findCorners((19,1),(16,1))
-    movesy2 = testing.actionList()
+    movesy2 = testing.actionList("East")
     print("yellow to second: ", movesy2)
 
     testing = PathFinder(getgrid)
     #secondloc to red
     find2r = testing.findCorners((16,1),(22,22))
-    moves2r = testing.actionList()
+    moves2r = testing.actionList("East")
     print("second to red: ", moves2r)
 
     testing = PathFinder(getgrid)
     #secondloc to yellow
     find2y = testing.findCorners((16,1),(19,1))
-    moves2y = testing.actionList()
+    moves2y = testing.actionList("East")
     print("second to yellow: ", moves2y)
 
     #print(getgrid)
@@ -72,133 +72,133 @@ def test2():
 
     #secondloc to thirdloc
     find3 = testing.findCorners((16,1),(13,1))
-    moves3 = testing.actionList()
+    moves3 = testing.actionList("East")
     print("second to third: ", moves3)
 
     testing = PathFinder(getgrid)
     #red to thirdloc
     findr3 = testing.findCorners((22,22),(13,1))
-    movesr3 = testing.actionList()
+    movesr3 = testing.actionList("West")
     print("red to third: ", movesr3)
 
     testing = PathFinder(getgrid)
     #yellow to thirdloc
     findy3 = testing.findCorners((19,1),(13,1))
-    movesy3 = testing.actionList()
+    movesy3 = testing.actionList("East")
     print("yellow to third: ", movesy3)
 
     testing = PathFinder(getgrid)
     #thirdloc to red
     find3r = testing.findCorners((13,1),(22,22))
-    moves3r = testing.actionList()
+    moves3r = testing.actionList("East")
     print("third to red: ", moves3r)
 
     testing = PathFinder(getgrid)
     #thirdloc to yellow
     find3y = testing.findCorners((13,1),(19,1))
-    moves3y = testing.actionList()
+    moves3y = testing.actionList("East")
     print("third to yellow: ", moves3y)
 
     testing = PathFinder(getgrid)
     #thirdloc to fourthloc
     find4 = testing.findCorners((13,1),(4,22))
-    moves4 = testing.actionList()
+    moves4 = testing.actionList("East")
     print("third to fourth: ", moves4)
 
     testing = PathFinder(getgrid)
     #red to fourthloc
     findr4 = testing.findCorners((22,22),(4,22))
-    movesr4 = testing.actionList()
+    movesr4 = testing.actionList("West")
     print("red to fourth: ", movesr4)
 
     testing = PathFinder(getgrid)
     #yellow to fourthloc
     findy4 = testing.findCorners((19,1),(4,22))
-    movesy4 = testing.actionList()
+    movesy4 = testing.actionList("East")
     print("yellow to fourth: ", movesy4)
 
     testing = PathFinder(getgrid)
     #fourth to red
     find4r = testing.findCorners((4,22),(22,22))
-    moves4r = testing.actionList()
+    moves4r = testing.actionList("South")
     print("fourth to red: ", moves4r)
 
     testing = PathFinder(getgrid)
     #fourth to yellow
     find4y  = testing.findCorners((4,22),(19,1))
-    moves4y = testing.actionList()
+    moves4y = testing.actionList("South")
     print("fourth to yellow: ", moves4y)
 
     testing = PathFinder(getgrid)
     #fourthloc to fifthloc
     find5 = testing.findCorners((4,22),(1,19))
-    moves5 = testing.actionList()
+    moves5 = testing.actionList("North")
     print("fourth to fifth: ", moves5)
 
     testing = PathFinder(getgrid)
     #red to fifthloc
     findr5 = testing.findCorners((22,22),(1,19))
-    movesr5 = testing.actionList()
+    movesr5 = testing.actionList("East")
     print("red to fifth: ", movesr5)
 
     testing = PathFinder(getgrid)
     #yellow to fifthloc
     findy5 = testing.findCorners((19,1),(1,19))
-    movesy5 = testing.actionList()
+    movesy5 = testing.actionList("East")
     print("yellow to fifth: ", movesy5)
 
     testing = PathFinder(getgrid)
     #fifth to red
     find5r = testing.findCorners((1,19),(22,22))
-    moves5r = testing.actionList()
+    moves5r = testing.actionList("East")
     print("fifth to red: ", moves5r)
 
     testing = PathFinder(getgrid)
     #fifth to yellow
     find5y = testing.findCorners((1,19),(19,1))
-    moves5y = testing.actionList()
+    moves5y = testing.actionList("East")
     print("fifth to yellow: ", moves5y)
 
     testing = PathFinder(getgrid)
     #fifthloc to sixthloc
     find6 = testing.findCorners((1,19),(4,1))
-    moves6 = testing.actionList()
+    moves6 = testing.actionList("West")
     print("fifth to sixth: ", moves6)
 
     testing = PathFinder(getgrid)
     #red to sixthloc
     findr6 = testing.findCorners((22,22),(4,1))
-    movesr6 = testing.actionList()
+    movesr6 = testing.actionList("West")
     print("red to sixth: ", movesr6)
 
     testing = PathFinder(getgrid)
     #yellow to sixthloc
     findy6 = testing.findCorners((19,1),(4,1))
-    movesy6 = testing.actionList()
+    movesy6 = testing.actionList("East")
     print("yellow to sixth: ", movesy6)
 
     testing = PathFinder(getgrid)
     #sixth to red
     find6r = testing.findCorners((4,1),(22,22))
-    moves6r = testing.actionList()
+    moves6r = testing.actionList("North")
     print("sixth to red: ", moves6r)
 
     testing = PathFinder(getgrid)
     #sixth to yellow
     find6y = testing.findCorners((4,1),(19,1))
-    moves6y = testing.actionList()
+    moves6y = testing.actionList("North")
     print("sixth to yellow: ", moves6y)
 
     testing = PathFinder(getgrid)
     #red to start
     findrstart = testing.findCorners((22,22),(22,1))
-    movesrstart = testing.actionList()
+    movesrstart = testing.actionList("West")
     print("red to start: ", movesrstart)
 
     testing = PathFinder(getgrid)
     #yellow to start
     findystart = testing.findCorners((19,1),(22,1))
-    movesystart = testing.actionList()
+    movesystart = testing.actionList("East")
     print("yellow to start: ", movesystart)
 
     #print(getgrid)
@@ -206,13 +206,32 @@ def test2():
     testing = PathFinder(getgrid)
     #obstacle location
     findobstacle = testing.findCorners((0,0),(19,22))
-    movesobstacle = testing.actionList()
+    movesobstacle = testing.actionList("North")
     print("obstacle to goal: ", movesobstacle)
 
     testing = PathFinder(getgrid)
     findobstacle1 = testing.findCorners((9,9),(13,1))
-    movesobstacle1 = testing.actionList()
+    movesobstacle1 = testing.actionList("West")
     print("obstacle1 to goal: ", movesobstacle1)
+
+def test3():
+    #get grid class
+    gridclass = gridCourse(None)
+
+    #get grid
+    getgrid = gridclass.getgridmap() 
+
+    testing = PathFinder(getgrid)
+    #red to start
+    findrstart = testing.findCorners((22,22),(22,1))
+    movesrstart = testing.actionList("East")
+    print("red to start: ", movesrstart)
+
+    testing = PathFinder(getgrid)
+    #yellow to start
+    findystart = testing.findCorners((19,1),(22,1))
+    movesystart = testing.actionList("North")
+    print("yellow to start: ", movesystart)
 
 """
 #pseudocode for actual run
@@ -257,6 +276,7 @@ def runCourse():
 
 #timing
 start = time.clock()
-test2()
+#test2()
+test3()
 end = time.clock()
 print(end-start)
