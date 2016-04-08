@@ -106,6 +106,10 @@ class PathFinder():
             print("VALID INPUTS")
             self.path = astar.astar(self.map, start, target)
 
+            #if we don't know gap then findCorners will return False
+            if self.path == False:
+                return False
+
             #####################################
             #get only turning points of the path#
             #####################################
@@ -136,25 +140,10 @@ class PathFinder():
         direction = ""
 
         facing = initfacing
+
         for index in range(len(self.corners)-1):
             distance1 = abs(self.corners[index][1] - self.corners[index+1][1]) #horizontal distance
             distance2 = abs(self.corners[index][0] - self.corners[index+1][0]) #vertical distance
-
-            ########################################
-            #find initial direction robot is facing#
-            ########################################
-
-            #if facing == "":
-            #    if self.corners[1][0] - self.corners[0][0] > 0:
-            #        facing = "South"
-            #    elif self.corners[1][0] - self.corners[0][0] < 0:
-            #        facing = "North"
-            #    elif self.corners[1][1] - self.corners[0][1] > 0:
-            #        facing = "East"
-            #    else:
-            #        facing = "West"
-            #    #print("initial facing: ", facing)
-
 
             #######################
             #which direction to go#
@@ -175,84 +164,140 @@ class PathFinder():
             #go North
             if direction == "North":
                 if facing == "North":
-                    move_list.append('F:' + str(distance2))
+                    pass
+                    #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing)
                 elif facing == "South": #180
-                    move_list.append('T:R')
-                    move_list.append('T:R')
-                    move_list.append('F:' + str(distance2))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:R')
+                        move_list.append('T:TURF:R')
+                    else:
+                        move_list.append('T:CITY:R')
+                        move_list.append('T:CITY:R')
+                    #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing)
                 elif facing == "East":
-                    move_list.append('T:L')
-                    move_list.append('F:' + str(distance2))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:L')
+                    else:
+                        move_list.append('T:CITY:L')
+                    #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing) 
                 elif facing == "West":
-                    move_list.append('T:R')
-                    move_list.append('F:' + str(distance2))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:R')
+                    else:
+                        move_list.append('T:CITY:R')
+                    #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing)
+
+                #if (self.corners[index] == (22,4) and self.corners[index+1] == (19,4)):
+                #    move_list.append('F:C')
+                #else:
+                move_list.append('F:' + str(distance2))
                 facing = direction
                 #print("facing: ", facing)
 
             #go South
             elif direction == "South":
                 if facing == "North": #180
-                    move_list.append('T:R')
-                    move_list.append('T:R')
-                    move_list.append('F:' + str(distance2))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:R')
+                        move_list.append('T:TURF:R')
+                    else:
+                        move_list.append('T:CITY:R')
+                        move_list.append('T:CITY:R')
+                    #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing)
                 elif facing == "South":
-                    move_list.append('F:' + str(distance2))
-                    print("previously facing: ", facing)
+                    pass
+                    #move_list.append('F:' + str(distance2))
+                    #print("previously facing: ", facing)
                 elif facing == "East":
-                    move_list.append('T:R')
-                    move_list.append('F:' + str(distance2))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:R')
+                    else:
+                        move_list.append('T:CITY:R')
+                    #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing)
                 elif facing == "West":
-                    move_list.append('T:L')
-                    move_list.append('F:' + str(distance2))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:L')
+                    else:
+                        move_list.append('T:CITY:L')
+                    #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing)
+
+                #if (self.corners[index] == (19,4) and self.corners[index+1] == (22,4)):
+                #    move_list.append('F:C')
+                #else:
+                move_list.append('F:' + str(distance2))
                 facing = direction
                 #print("facing: ", facing)
 
             #go West
             elif direction == "West":
                 if facing == "North":
-                    move_list.append('T:L')
-                    move_list.append('F:' + str(distance1))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:L')
+                    else:
+                        move_list.append('T:CITY:L')
+                    #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
                 elif facing == "South":
-                    move_list.append('T:R')
-                    move_list.append('F:' + str(distance1))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:R')
+                    else:
+                        move_list.append('T:CITY:R')
+                    #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
                 elif facing == "East": #180
-                    move_list.append('T:R')
-                    move_list.append('T:R')
-                    move_list.append('F:' + str(distance1))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:R')
+                        move_list.append('T:TURF:R')
+                    else:
+                        move_list.append('T:CITY:R')
+                        move_list.append('T:CITY:R')
+                    #move_list.append('F:' + str(distance1))
                     #print("previouslyfacing: ", facing)
                 elif facing == "West":
-                    move_list.append('F:' + str(distance1))
+                    pass
+                    #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
+                move_list.append('F:' + str(distance1))
                 facing = direction
                 #print("facing: ", facing)
 
             #go East
             elif direction == "East":
                 if facing == "North":
-                    move_list.append('T:R')
-                    move_list.append('F:' + str(distance1))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:R')
+                    else:
+                        move_list.append('T:CITY:R')
+                    #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
                 elif facing == "South":
-                    move_list.append('T:L')
-                    move_list.append('F:' + str(distance1))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:L')
+                    else:
+                        move_list.append('T:CITY:L')
+                    #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
                 elif facing == "East":
-                    move_list.append('F:' + str(distance1))
+                    pass
+                    #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
                 elif facing == "West": #180
-                    move_list.append('T:R')
-                    move_list.append('T:R')
-                    move_list.append('F:' + str(distance1))
+                    if self.corners[index][0] < 14:
+                        move_list.append('T:TURF:R')
+                        move_list.append('T:TURF:R')
+                    else:
+                        move_list.append('T:CITY:R')
+                        move_list.append('T:CITY:R')
+                    #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
+                move_list.append('F:' + str(distance1))
                 facing = direction
                 #print("facing: ", facing)
             else:
@@ -296,28 +341,20 @@ class gridCourse():
 
             [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
             [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #thirdloc: (13,1)
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
+            [1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1],
 
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
+            [1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1],
             [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #secondloc: (16,1)
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
+            [1,1,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1],
 
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
-            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #firstloc: (19,22), yellow: (19,1)
+            [1,1,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1],
+            [1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1], #firstloc: (19,22), yellow: (19,1)
             [1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
 
             [1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
             [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #start: (22, 1), red: (22,22)
             [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1]])
     
-    ######################################################
-    #return the edited grid when we know where the gap is#
-    ######################################################
-    def editgridmap(self, gapa, gapb):
-        self.gridmap[gapa] = 0
-        self.gridmap[gapb] = 0
-        return self.gridmap
-
     ##############
     #get the grid#
     ##############
