@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 
 #color_filter.py
@@ -59,6 +60,23 @@ def detectColor(img):
         return 'RED'
     else:
         return 'YELLOW'
+
+def detectVictim(img):
+    threshold = 100
+    bright = img #brighten(img)
+    (red,i1) = filterRed(bright)
+    (yellow,i2) = filterYellow(bright)
+
+    totalRed = red.sum(axis=1).sum(axis=0)
+    totalYellow = yellow.sum(axis=1).sum(axis=0)
+
+    print('Red Score = ' + str(totalRed))
+    print('Yellow Score = ' + str(totalYellow))
+    
+    if totalRed >= threshold or totalYellow >= threshold:
+        return True
+    else:
+        return False
     
 if __name__ == '__main__':
 

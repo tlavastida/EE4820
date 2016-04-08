@@ -8,7 +8,12 @@
 
 import robot_serial
 #import numpy
-
+import Pathfinding
+import color_filter
+import picamera
+import picamera.array
+import cv2
+import time
 
 class Robot:
     #constructor
@@ -33,6 +38,9 @@ class Robot:
         self.dx = 1
         self.dy = 0
 
+        ### Camera Stuff ###
+        self.cam = picamera.PiCamera()
+        
     def print_state(self):
         print('rescued victims: ' + str(self.found_victims))
         print('position: (' + str(self.grid_x) + ',' + str(self.grid_y))
@@ -56,6 +64,7 @@ class Robot:
 
     #functions I already wrote, all had a similar pattern
     def forward(self,distance):
+        print('G'+str(distance))
         self.ser.send('G'+str(distance))
         while self.ser.available() <= 0:
             pass
@@ -63,8 +72,8 @@ class Robot:
         return msg #PLACEHOLDER
         
     #tells arduino to turn left
-    def turn_left(self):
-        self.ser.send('T1L')
+    def turn_left(self,num_turns):
+        self.ser.send('T'+str(num_turns)+'L')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
@@ -73,8 +82,8 @@ class Robot:
         return msg #PLACEHOLDER
 
     #tells arduino to turn right
-    def turn_right(self):
-        self.ser.send('T1R')
+    def turn_right(self,num_turns):
+        self.ser.send('T'+str(num_turns)+'R')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
@@ -124,7 +133,80 @@ class Robot:
 
         return msg
 
+    def direction(self):
+        if self.dx == 1 and self.dy == 0:
+            return 'East'
+        elif self.dx == -1 and self.dy == 0:
+            return 'West'
+        elif self.dx == 0 and self.dy == 1:
+            return 'North'
+        elif self.dx == 0 and self.dy == -1:
+            return 'South'
+        else:
+            return None
 
+    def detectVictim(self):
+        with picamera.array.PiRGBArray(self.cam) as stream:
+            self.cam.capture(stream, format='bgr')
+            # At this point the image is available as stream.array
+            image = stream.array
+            return color_filter.detectVictim(image)
+        #self.cam.capture(stream, format='bgr')#,resize=(320,240))
+        #img = self.stream.array
+        #return color_filter.detectVictim(img)
+        
+        
+def main_loop():
+
+    sara = Robot()
+    grid = Pathfinding.gridCourse(None)
+    pathfind = Pathfinding.PathFinder(grid.gridmap)
+
+    targetList = [(19,22), (16,1), (13,1), (4,22), (1,19), (4,1)]
+
+    startpos = (22,1)
+    sara.grid_x = 22
+    sara.grid_y = 1
+
+def test_run():
+    sara = Robot()
+    time.sleep(2)
+    grid = Pathfinding.gridCourse(None)
+    pathfind = Pathfinding.PathFinder(grid.gridmap)
+
+    sara.grid_x = 22
+    sara.grid_y = 1
+
+    target = (19,22)
+
+    pathfind.findCorners( (sara.grid_x,sara.grid_y), target )
+    actions = pathfind.actionList( sara.direction() )
+
+    print('Computed path, starting route...')
+
+    
+    for move in actions:
+        print(move)
+        words = move.split(':')
+        if words[0] == 'F':
+            grid_dist = int(words[1])
+            cms = 10*grid_dist
+            print(cms)
+            msg = sara.forward(cms)
+        elif words[0] == 'T' and words[1] == 'R':
+            msg = sara.turn_right(1)
+        elif words[0] == 'T' and words[1] == 'L':
+            msg = sara.turn_left(1)
+        else:
+            msg = 'Not a valid move?'
+
+        print(msg)
+        time.sleep(1.5)
+        
+
+    print('YAY..... maybe?')
+    
+    
 def interactive_main_loop():
     
     #my most favorite line of code ever -- Thomas
@@ -140,15 +222,23 @@ def interactive_main_loop():
                 distance = 30
             else:
                 distance = int(words[1])
-            msg = sara.forward('G'+str(distance))
+            msg = sara.forward(distance)
             print(msg)
             #print('going forward ' + str(distance) + ' centimeters')
         elif cmd == 'left':
-            msg = sara.turn_left()
+            if len(words) < 2:
+                num_words = 1
+            else:
+                num_words = int(words[1])
+            msg = sara.turn_left(num_words)
             print(msg)
             #print('turning left')
         elif cmd == 'right':
-            msg = sara.turn_right()
+            if len(words) < 2:
+                num_turns = 1
+            else:
+                num_turns = int(words[1])
+            msg = sara.turn_right(num_turns)
             print(msg)
             #print('turning right')
         elif cmd == 'lower':
@@ -180,7 +270,7 @@ def interactive_main_loop():
 
         
 if __name__ == '__main__':
-    interactive_main_loop()
-        
+    #interactive_main_loop()
+    test_run()
     
     
