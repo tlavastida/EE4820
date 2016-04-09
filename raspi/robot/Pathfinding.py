@@ -2,17 +2,50 @@ import astar
 import numpy
 import time
 
-class PathFinder():
-    def __init__(self,map):
-        self.map = map
-        self.path = [] #astar's path
-        self.corners = [] #corners/turning points
+class PathFinder:
+    def __init__(self):
         self.start = None
         self.target = None
+        self.map = numpy.array([
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
+            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #fifthloc: (1,19)
+            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1], 
 
+            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1],
+            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1], #sixthloc: (4,1), fourthloc: (4,22)
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+
+
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #thirdloc: (13,1)
+            [1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1],
+
+            [1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1],
+            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #secondloc: (16,1)
+            [1,1,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1],
+
+            [1,1,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1],
+            [1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1], #firstloc: (19,22), yellow: (19,1)
+            [1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
+
+            [1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
+            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #start: (22, 1), red: (22,22)
+            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1]])
+    
     #inputs - start pos, target pos
     #outputs - furthest position in a straight line
     def findCorners(self, start, target):
+
+        self.path = []
+        self.corners = []
         if self.map[start] == 1:
             print("INVALID START INPUT")
             #############################
@@ -106,10 +139,6 @@ class PathFinder():
             print("VALID INPUTS")
             self.path = astar.astar(self.map, start, target)
 
-            #if we don't know gap then findCorners will return False
-            if self.path == False:
-                return False
-
             #####################################
             #get only turning points of the path#
             #####################################
@@ -169,11 +198,9 @@ class PathFinder():
                     #print("previously facing: ", facing)
                 elif facing == "South": #180
                     if self.corners[index][0] < 14:
-                        move_list.append('T:TURF:R')
-                        move_list.append('T:TURF:R')
+                        move_list.append('T:TURF:ROTATE')
                     else:
-                        move_list.append('T:CITY:R')
-                        move_list.append('T:CITY:R')
+                        move_list.append('T:CITY:ROTATE')
                     #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing)
                 elif facing == "East":
@@ -202,11 +229,9 @@ class PathFinder():
             elif direction == "South":
                 if facing == "North": #180
                     if self.corners[index][0] < 14:
-                        move_list.append('T:TURF:R')
-                        move_list.append('T:TURF:R')
+                        move_list.append('T:TURF:ROTATE')
                     else:
-                        move_list.append('T:CITY:R')
-                        move_list.append('T:CITY:R')
+                        move_list.append('T:CITY:ROTATE')
                     #move_list.append('F:' + str(distance2))
                     #print("previously facing: ", facing)
                 elif facing == "South":
@@ -253,11 +278,9 @@ class PathFinder():
                     #print("previously facing: ", facing)
                 elif facing == "East": #180
                     if self.corners[index][0] < 14:
-                        move_list.append('T:TURF:R')
-                        move_list.append('T:TURF:R')
+                        move_list.append('T:TURF:ROTATE')
                     else:
-                        move_list.append('T:CITY:R')
-                        move_list.append('T:CITY:R')
+                        move_list.append('T:CITY:ROTATE')
                     #move_list.append('F:' + str(distance1))
                     #print("previouslyfacing: ", facing)
                 elif facing == "West":
@@ -290,11 +313,9 @@ class PathFinder():
                     #print("previously facing: ", facing)
                 elif facing == "West": #180
                     if self.corners[index][0] < 14:
-                        move_list.append('T:TURF:R')
-                        move_list.append('T:TURF:R')
+                        move_list.append('T:TURF:ROTATE')
                     else:
-                        move_list.append('T:CITY:R')
-                        move_list.append('T:CITY:R')
+                        move_list.append('T:CITY:ROTATE')
                     #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
                 move_list.append('F:' + str(distance1))
@@ -303,7 +324,7 @@ class PathFinder():
             else:
                 move_list.append('Stop')
 
-        return move_list
+        print(move_list)
 
     ########################################
     #convert encoder coord to virtual coord# 
@@ -324,10 +345,10 @@ class gridCourse():
         self.gridmap = numpy.array([
             [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
             [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #fifthloc: (1,19)
-            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1], 
+            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1], 
 
-            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1],
-            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1], #sixthloc: (4,1), fourthloc: (4,22)
+            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
+            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1], #sixthloc: (4,1), fourthloc: (4,22)
             [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
 
             [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
