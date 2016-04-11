@@ -32,8 +32,8 @@ void travelDistance_Enc_Steve(int numTicks)
   int leftAdjust = -6;
   int minSpeed = speed - 10;
   int maxSpeed = speed + 10 - leftAdjust;
-
-  int errir = 0;
+  
+  int error = 0;
   int Kp = 5;
   int dangerCounter = 0;
   int dangerCountThresh = 2;
@@ -43,15 +43,7 @@ void travelDistance_Enc_Steve(int numTicks)
   checkSensors();
   accelFromStop(speed, 0);
 
-  int prevL = 0;
-  int prevR = 0;
-  int diff = 0;
-  int hallThreshold = 4;
-  int clearThreshold = 5;
-
   checkSensors_US();
-  prevL = Distance_US_L;
-  prevR = Distance_US_R;
 
   if (numTicks > 1820)
   {
