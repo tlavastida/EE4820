@@ -60,14 +60,14 @@ const int CONV_FACTOR = 52;                     //counts per cm, 13 for cm 33 fo
 const int TURN_TICK_COUNT = 1016;               //number of ticks for a turn (sqrt((3.875^2)+(3^2))*(pi/2)*2.54 = cm
 
 //Distance Thresholds
-const int PICKUP_VICTIM_THRESHOLD = 67;                       //pickup victim at this Distance (mm)
+const int PICKUP_VICTIM_THRESHOLD = 70;                       //pickup victim at this Distance (mm)
 const int VICTIM_AHEAD_THRESHOLD = 110;                       //victim is ahead of robot, start aligning (mm)
-const int PICKUP_TOLERANCE = 5;                         //use threshold - measurement and check tolerance (mm)
+const int PICKUP_TOLERANCE = 6;                         //use threshold - measurement and check tolerance (mm)
 const int DANGER_ZONE = PICKUP_VICTIM_THRESHOLD-PICKUP_TOLERANCE;   //Stop Immediately
 
 //Motor speeds
 const int STOP = 0;  
-const int SLOW = 55;     
+//const int SLOW = 55;     
 const int SPEED = 100; //90;
 const int TURN_SPEED = 130;    //added a faster speed to test zero turn
 const int LEFT_MOTOR_ADJ = -4;  //SMS was -6, testing -5// -15
@@ -136,10 +136,11 @@ void loop()
 			  switch(turnDir)
 			  {
 				case 'L':
-				  turnLeft_P();
+				  //turnLeft_P();
+         turnLeft_tick();
 				  break;
 				case 'R':
-				  turnRight_P();
+				  turnRight_tick();
 				  break;
 				default:
 				  break;
@@ -186,7 +187,8 @@ void encoderInterruptRight()
 
 void taskComplete()
 {
-  sprintf(Buffer,"Encoder_L: %ld,\tEncoder_R: %ld\n",Count_Encoder_Left,Count_Encoder_Right);
+  int leftDistance = Count_Encoder_Left/CONV_FACTOR; //convert ticks to cm, driving motor
+  sprintf(Buffer,"DistTravelled: %d\n",leftDistance);
   Serial.print(Buffer);
 }
 
@@ -279,6 +281,7 @@ void align()
 {
   int acquireSlow = 40;
   bool targetAcquired = false;
+  int PICKUP_TOLERANCE = 4;
   int currentTime = millis();
   while (targetAcquired == false)
   {
@@ -321,6 +324,21 @@ void checkSensors()
   Distance_US_L = checkUS(DIG_PIN_US_L);
   Distance_US_R = checkUS(DIG_PIN_US_R);
   Distance_US_F = checkUS(DIG_PIN_US_F);
+}
+
+//SMS made new function for just the US
+void checkSensors_US()
+{
+	Distance_US_L = checkUS(DIG_PIN_US_L);
+	Distance_US_R = checkUS(DIG_PIN_US_R);
+	Distance_US_F = checkUS(DIG_PIN_US_F);
+}
+
+//SMS made new function for just the IR
+void checkSensors_IR()
+{
+	Distance_IR_L = checkIR(ANALOG_PIN_IR_L);
+	Distance_IR_R = checkIR(ANALOG_PIN_IR_R);
 }
 
 long checkIR (int pinNumIR)
@@ -391,7 +409,7 @@ void raiseGripper()
 
 void turnLeft_P()
 {
-  long currentTime = 0;
+  int SLOW = 60;
   
   int Kp = 3;
 
@@ -480,7 +498,7 @@ void turnLeft_P()
 
 void turnRight_P()
 {
-  {
+  int SLOW = 60;
   int Kp = 2; //1
   //1016,900,958,929,
   int rightTickCount = 943; //individually tuned for right turns
@@ -531,22 +549,223 @@ void turnRight_P()
     leftInput = Kp*el;
     rightInput = Kp*er;
 
+
     if(el >= 0)
     {
+      leftInput = (leftInput <= SLOW) ? SLOW : (leftInput >= topSpeed) ? topSpeed : leftInput;
+    }
+    else 
+    {
+      leftInput = (leftInput >= -1*SLOW) ? -1*SLOW :(leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
+    }
+
+    if(er >= 0)
+    {
+      rightInput = (rightInput <= SLOW) ? SLOW : (rightInput >= topSpeed) ? topSpeed : rightInput;
+    }
+    else
+    {
+      rightInput = (rightInput >= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
+    }
+    
+    //input the inputs
+    mtr_ctrl.setM2Speed(leftInput);
+    mtr_ctrl.setM1Speed(rightInput);
+
+    if (( millis() - startTime) > 1200)
+    {
+      break;
+    }
+  }
+ 
+  mtr_ctrl.setSpeeds(STOP,STOP);
+    
+}
+
+/*
+void turnLeft_Experiment()
+{
+  int slow = 65;
+  int top = 90;
+  int Kp = 10;
+
+  int Count_R = 1016;
+  int Count_L = -1016;
+  
+  Count_Encoder_Left = 0;
+  Count_Encoder_Right = 0;
+
+  
+}
+*/
+
+void turnLeft_P_city()
+{
+  int SLOW = 65;
+  int Kp = 30;// 20;
+
+  int leftTickCount = 1016; // 950; //individually tuned for left turns
+  //Set points
+  int count_L = Count_Encoder_Left - leftTickCount;
+  int count_R = Count_Encoder_Right + leftTickCount;
+
+  long startTime = millis();
+
+  int topSpeed = 90;     //150
+
+  int el = count_L - Count_Encoder_Left; 
+  int er = count_R - Count_Encoder_Right;
+  int tol = 15;
+  
+  //compute error
+    el = count_L - Count_Encoder_Left;
+    er = count_R - Count_Encoder_Right;
+    
+    int leftInput = el*Kp;
+    int rightInput = er*Kp;
+    //compute inputs with saturation
+    if(el >= 0)
+    {
+      leftInput = (leftInput <= SLOW) ? SLOW : (leftInput >= topSpeed) ? topSpeed : leftInput;
+    }
+    else 
+    {
+      leftInput = (leftInput >= -1*SLOW) ? -1*SLOW : (leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
+    }
+
+    if(er >= 0)
+    {
+      rightInput = (rightInput <= SLOW) ? SLOW : (rightInput >= topSpeed) ? topSpeed : rightInput;
+    }
+    else
+    {
+      rightInput = (rightInput >= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
+    }
+    
+  accelFromStop( (abs(leftInput)+abs(rightInput))/2 ,2);
+  
+  while ((abs(el) >= tol) || (abs(er) >= tol))
+  {
+    //compute error
+    el = count_L - Count_Encoder_Left;
+    er = count_R - Count_Encoder_Right;
+    
+    leftInput = el*Kp;
+    rightInput = er*Kp;
+
+    if(el >= 0)
+    {
+      //leftInput = (leftInput <= SLOW) ? SLOW : (leftInput >= topSpeed) ? topSpeed : leftInput;
       leftInput = (leftInput >= topSpeed) ? topSpeed : leftInput;
     }
     else 
     {
+      //leftInput = (leftInput >= -1*SLOW) ? -1*SLOW :(leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
       leftInput = (leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
     }
 
     if(er >= 0)
     {
+      //rightInput = (rightInput <= SLOW) ? SLOW : (rightInput >= topSpeed) ? topSpeed : rightInput;
       rightInput = (rightInput >= topSpeed) ? topSpeed : rightInput;
     }
     else
     {
+      //rightInput = (rightInput <= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
       rightInput = (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
+    }
+    
+    
+    //input the inputs
+    mtr_ctrl.setM2Speed(leftInput);
+    mtr_ctrl.setM1Speed(rightInput);
+
+    //printSensorValues();
+    if (( millis() - startTime) > 1200)
+    {
+      break;
+    }
+    Serial.print("Encoder Left: ");
+  Serial.print(Count_Encoder_Left);
+  Serial.print(" Encoder Right: ");
+  Serial.print(Count_Encoder_Right);
+  Serial.println();
+  }
+
+  delay(1000);
+  mtr_ctrl.setSpeeds(STOP,STOP);
+  
+}
+
+void turnRight_P_city()
+{
+  int SLOW = 60;
+  int Kp = 2; //1
+  //1016,900,958,929,
+  int rightTickCount = 943; //individually tuned for right turns
+  //Set points
+  int count_L = Count_Encoder_Left + rightTickCount;
+  int count_R = Count_Encoder_Right - rightTickCount;
+
+  long startTime = millis();
+  int topSpeed = 140;     //160 orig
+
+  int el = count_L - Count_Encoder_Left; 
+  int er = count_R - Count_Encoder_Right;
+  int tol = 17; //10
+  
+  //compute error
+    el = count_L - Count_Encoder_Left;
+    er = count_R - Count_Encoder_Right;
+    
+    int leftInput = el*Kp;
+    int rightInput = er*Kp;
+    //compute inputs with saturation
+    if(el >= 0)
+    {
+      leftInput = (leftInput <= SLOW) ? SLOW : (leftInput >= topSpeed) ? topSpeed : leftInput;
+    }
+    else 
+    {
+      leftInput = (leftInput >= -1*SLOW) ? -1*SLOW : (leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
+    }
+
+    if(er >= 0)
+    {
+      rightInput = (rightInput <= SLOW) ? SLOW : (rightInput >= topSpeed) ? topSpeed : rightInput;
+    }
+    else
+    {
+      rightInput = (rightInput >= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
+    }
+    
+  accelFromStop( (abs(leftInput)+abs(rightInput))/2 ,3);
+  
+  while ((abs(el) >= tol) || (abs(er) >= tol))
+  {
+    //compute error
+    el = count_L - Count_Encoder_Left;
+    er = count_R - Count_Encoder_Right;
+    
+    leftInput = Kp*el;
+    rightInput = Kp*er;
+
+    if(el >= 0)
+    {
+      leftInput = (leftInput <= SLOW) ? SLOW : (leftInput >= topSpeed) ? topSpeed : leftInput;
+    }
+    else 
+    {
+      leftInput = (leftInput >= -1*SLOW) ? -1*SLOW :(leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
+    }
+
+    if(er >= 0)
+    {
+      rightInput = (rightInput <= SLOW) ? SLOW : (rightInput >= topSpeed) ? topSpeed : rightInput;
+    }
+    else
+    {
+      rightInput = (rightInput >= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
     }
     
     //input the inputs
@@ -562,7 +781,7 @@ void turnRight_P()
   mtr_ctrl.setSpeeds(STOP,STOP);
   
 }  
-}
+
 
 void manipulateGripper(char option)
 {
@@ -596,14 +815,64 @@ void manipulateGripper(char option)
   }
 }
 
-void travelDistance_Enc(int numTicks)
+//void travelDistance_Enc(int numTicks)
+//{
+//   int speed = 100;					//set speed to go
+//   int followerSpeed = speed;//+5;   //right motor is the follower
+//   int leftAdjust = -6;
+//   int minSpeed = speed - 10;
+//   int maxSpeed = speed + 10 - leftAdjust;
+//   
+//   int error = 0;
+//   int Kp = 5; //10;
+//   int dangerCounter = 0;
+//   int dangerCountThresh = 2;
+//   Count_Encoder_Left = 0;
+//   Count_Encoder_Right = 0;
+//   int leftSpeed = speed;
+//   checkSensors();
+//   accelFromStop(speed, 0);
+//   while (abs(Count_Encoder_Left)<numTicks)
+//   {
+//      checkSensors();
+//      if(Distance_US_F > US_DANGER_THRESHOLD)
+//      {
+//        dangerCounter = 0;
+//        error = Count_Encoder_Left - Count_Encoder_Right;
+//        followerSpeed += error/Kp;
+//        if(followerSpeed >= maxSpeed) 
+//          followerSpeed = maxSpeed;
+//        else if(followerSpeed <= minSpeed) 
+//          followerSpeed = minSpeed; 
+//      }
+//      else
+//      {
+//        dangerCounter += 1;
+//        if(dangerCounter >= dangerCountThresh)
+//        {
+////          leftSpeed = STOP;
+////          followerSpeed = STOP;
+//          //maybe break?
+//          break;
+//        } 
+//      }
+//      mtr_ctrl.setM2Speed(leftSpeed+leftAdjust);
+//      mtr_ctrl.setM1Speed(followerSpeed);//+8); 
+//      delay(100);    //100-60 
+//   }
+//   mtr_ctrl.setM2Speed(STOP);
+//   mtr_ctrl.setM1Speed(STOP); 
+//}
+
+void travelDistance_Enc_Steve(int numTicks)						//Added to test
 {
-   int speed = 100;					//set speed to go
+   int speed = 100;          //set speed to go
    int followerSpeed = speed;//+5;   //right motor is the follower
    int leftAdjust = -6;
    int minSpeed = speed - 10;
    int maxSpeed = speed + 10 - leftAdjust;
-   
+
+
    int error = 0;
    int Kp = 5; //10;
    int dangerCounter = 0;
@@ -613,36 +882,269 @@ void travelDistance_Enc(int numTicks)
    int leftSpeed = speed;
    checkSensors();
    accelFromStop(speed, 0);
-   while (abs(Count_Encoder_Left)<numTicks)
-   {
-      checkSensors();
-      if(Distance_US_F > US_DANGER_THRESHOLD)
-      {
-        dangerCounter = 0;
-        error = Count_Encoder_Left - Count_Encoder_Right;
-        followerSpeed += error/Kp;
-        if(followerSpeed >= maxSpeed) 
-          followerSpeed = maxSpeed;
-        else if(followerSpeed <= minSpeed) 
-          followerSpeed = minSpeed; 
-      }
-      else
-      {
-        dangerCounter += 1;
-        if(dangerCounter >= dangerCountThresh)
+   
+   int prevL = 0;
+   int prevR = 0;
+   int diff = 0;
+   int hallThreshold = 4;		//cm
+   int clearThreshold = 5;		//cm
+
+checkSensors_US();
+prevL = Distance_US_L;
+prevR = Distance_US_R;
+
+	if(numTicks > 1820)					//35*52
+	{
+		
+		{
+			while (abs(Count_Encoder_Left)<numTicks)
+			{
+				checkSensors_US();
+				if (Distance_US_F > US_DANGER_THRESHOLD)
+				{
+					dangerCounter = 0;
+					if (Distance_US_L < Distance_US_R)
+					{
+						diff = (Distance_US_L - prevL);
+						error = abs(hallThreshold - Distance_US_L);
+						Serial.print("diff = ");
+						Serial.print(diff);
+						Serial.print(" err = ");
+						Serial.println(error);
+						
+					}
+					else if (Distance_US_R < Distance_US_L)
+					{
+						diff = (Distance_US_R - prevR) * -1;
+						error = abs(hallThreshold - Distance_US_R);
+						Serial.print("diff = ");
+						Serial.print(diff);
+						Serial.print(" err = ");
+						Serial.println(error);
+					}
+					followerSpeed += error*diff;
+					Serial.print("follower = ");
+					Serial.println(followerSpeed);
+					mtr_ctrl.setM2Speed(leftSpeed+leftAdjust);
+					mtr_ctrl.setM1Speed(followerSpeed);//+8); 
+				}
+				else
+				{
+					dangerCounter += 1;
+					if(dangerCounter >= dangerCountThresh)
+					{
+						break;
+					} 
+				}
+			}
+			mtr_ctrl.setM2Speed(STOP);
+			mtr_ctrl.setM1Speed(STOP); 
+		}
+	}
+	else 
+	{
+	//do the encoder thing if the US are okay
+		 while (abs(Count_Encoder_Left)<numTicks)
+		 {
+			checkSensors_US();
+			
+			  if(Distance_US_F > US_DANGER_THRESHOLD)
+			  {
+				dangerCounter = 0;
+				error = Count_Encoder_Left - Count_Encoder_Right;
+				followerSpeed += error/Kp;
+				if(followerSpeed >= maxSpeed) 
+				  followerSpeed = maxSpeed;
+				else if(followerSpeed <= minSpeed) 
+				  followerSpeed = minSpeed; 
+			  }
+			  else
+			  {
+				dangerCounter += 1;
+				if(dangerCounter >= dangerCountThresh)
+				{
+		//          leftSpeed = STOP;
+		//          followerSpeed = STOP;
+				  //maybe break?
+				  break;
+				} 
+			  }
+			  
+		   mtr_ctrl.setM2Speed(leftSpeed+leftAdjust);
+		   mtr_ctrl.setM1Speed(followerSpeed);//+8); 
+		   delay(100);    //100-60 
+		 }
+		 mtr_ctrl.setM2Speed(STOP);
+		 mtr_ctrl.setM1Speed(STOP); 
+}
+}
+
+//CURRENT VERSION THAT WE WERE USING			
+//SMS backup for current version of travel using encoders 4/11/16
+void travelDistance_Enc(int numTicks)
+{
+   int speed = 100;          //set speed to go
+   int followerSpeed = speed;//+5;   //right motor is the follower
+   int leftAdjust = -6;
+   int minSpeed = speed - 10;
+   int maxSpeed = speed + 10 - leftAdjust;
+
+
+   int error = 0;
+   int Kp = 5; //10;
+   int dangerCounter = 0;
+   int dangerCountThresh = 2;
+   Count_Encoder_Left = 0;
+   Count_Encoder_Right = 0;
+   int leftSpeed = speed;
+   checkSensors();
+   accelFromStop(speed, 0);
+
+checkSensors();
+//do the encoder thing if the US are okay
+     while (abs(Count_Encoder_Left)<numTicks)
+     {
+        checkSensors();
+        if (Distance_US_L <= 7)
         {
-//          leftSpeed = STOP;
-//          followerSpeed = STOP;
-          //maybe break?
-          break;
-        } 
-      }
-      mtr_ctrl.setM2Speed(leftSpeed+leftAdjust);
-      mtr_ctrl.setM1Speed(followerSpeed);//+8); 
-      delay(100);    //100-60 
-   }
-   mtr_ctrl.setM2Speed(STOP);
-   mtr_ctrl.setM1Speed(STOP); 
+            error = 5;
+            followerSpeed -= error;
+        }
+        else if (Distance_US_R <= 7)
+        {
+            error = 5;
+            followerSpeed += error;
+        }
+        else
+        {
+          if(Distance_US_F > US_DANGER_THRESHOLD)
+          {
+            dangerCounter = 0;
+            error = Count_Encoder_Left - Count_Encoder_Right;
+            followerSpeed += error/Kp;
+            if(followerSpeed >= maxSpeed) 
+              followerSpeed = maxSpeed;
+            else if(followerSpeed <= minSpeed) 
+              followerSpeed = minSpeed; 
+          }
+          else
+          {
+            dangerCounter += 1;
+            if(dangerCounter >= dangerCountThresh)
+            {
+    //          leftSpeed = STOP;
+    //          followerSpeed = STOP;
+              //maybe break?
+              break;
+            } 
+          }
+          
+       }
+       mtr_ctrl.setM2Speed(leftSpeed+leftAdjust);
+       mtr_ctrl.setM1Speed(followerSpeed);//+8); 
+       delay(100);    //100-60 
+     }
+     mtr_ctrl.setM2Speed(STOP);
+     mtr_ctrl.setM1Speed(STOP); 
+}
+
+int dangerCorrect(int counter)
+{
+  int Kp = 2;
+  int err = 0;
+  int dangerThreshUS = 6;  //cm
+  int countMin = 30;
+  if (counter > countMin)
+  {
+    checkSensors(); 
+    
+    if ((Distance_US_L <= dangerThreshUS) && (Distance_US_L != 0))
+    {
+      err = Kp*(dangerThreshUS-Distance_US_L);
+    }
+    else if ((Distance_US_R <= dangerThreshUS) && (Distance_US_R != 0))
+    {
+      err = Kp*(dangerThreshUS-Distance_US_R);
+    }
+    return err;
+  }
+} 
+
+//void turnLeft_tick()
+//{
+//  Count_Encoder_Right = 0;
+//  Count_Encoder_Left = 0;
+//  int tickGoal = 1016;
+//  //int base = 130;
+//  int Kp = 2;
+//
+//  int leftSpeed = 0;
+//  int rightSpeed = 0;
+//  int topSpeed = 100;
+//  int tol = 10;
+//
+//  int error = tickGoal - Count_Encoder_Right;
+//
+//  while( abs(error) > tol )
+//  {
+//    rightSpeed = error*Kp;
+//    rightSpeed = (leftSpeed >= topSpeed) ? topSpeed : leftSpeed;
+//
+//    leftSpeed = 0-rightSpeed;
+//
+//    mtr_ctrl.setM2Speed(leftSpeed);
+//    mtr_ctrl.setM1Speed(rightSpeed);
+//    delay(10);
+//
+//    error = tickGoal - Count_Encoder_Right;
+//    
+//  }
+//
+//  mtr_ctrl.setSpeeds(STOP,STOP);
+//  
+////  accelFromStop(speed,2);
+////  while (Count_Encoder_Right < tickGoal)
+////  {
+////     mtr_ctrl.setM2Speed(-1*speed);
+////     mtr_ctrl.setM1Speed(speed); 
+////  }
+////  delay(100);
+////  mtr_ctrl.setM1Speed(STOP);
+////  mtr_ctrl.setM2Speed(STOP);
+//}
+
+void turnRight_tick()
+{
+  Count_Encoder_Left =0;
+  Count_Encoder_Right =0;
+  int tickGoal = 900;
+  int speed = 130;
+  accelFromStop(speed,3);
+  while (Count_Encoder_Left < tickGoal)
+  {
+     mtr_ctrl.setM2Speed(speed);
+     mtr_ctrl.setM1Speed(-1*speed); 
+  }
+  delay(100);
+  mtr_ctrl.setM1Speed(STOP);
+  mtr_ctrl.setM2Speed(STOP);
+}
+
+void turnLeft_tick()
+{
+  Count_Encoder_Left = 0;
+  Count_Encoder_Right = 0;
+  int tickGoal = 1016;  //original 1016
+  int speed = 130;
+  accelFromStop(speed,2);
+  while (Count_Encoder_Right < tickGoal)
+  {
+     mtr_ctrl.setM2Speed(-1*speed);
+     mtr_ctrl.setM1Speed(speed); 
+  }
+  delay(100);
+  mtr_ctrl.setM1Speed(STOP);
+  mtr_ctrl.setM2Speed(STOP);
 }
 
 
