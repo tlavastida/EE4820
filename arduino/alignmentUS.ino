@@ -7,14 +7,14 @@ void alignmentUS() {
   // put your main code here, to run repeatedly:
 
   alignThreshold = 4;
-  while (US_R1_D != US_R2_D || US_L2_D != US_L2_D)
+  while (US_R1_D < US_R2_D || US_L1_D < US_L2_D)
   {
-    if (US_R1_D <= alignThreshold && US_R2_D > US_R1_D) // veering right, go counter-clockwise
+    if (US_R1_D <= alignThreshold) // veering right, go counter-clockwise
     {
       m2const = -1;
       m1const = 1;
     }
-    else if (US_L1_D <= alignThreshold && US_L2_D > US_L1_D) // veering left, go clockwise
+    else if (US_L1_D <= alignThreshold) // veering left, go clockwise
     {
       m2const = 1;
       m1const = -1;
