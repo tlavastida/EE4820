@@ -126,7 +126,7 @@ void loop()
 		  case GO:
 			distance = Serial.parseInt();
 			tickGoal = CONV_FACTOR * distance;
-			travelDistance_Enc(tickGoal);
+			travelDistance_revision(tickGoal);
      //adjust????
 			taskComplete();
 		  break;
@@ -1210,3 +1210,69 @@ void alignRobot()
   Serial.println(Distance_IR_R);
 }
 
+void travelDistance_revision(int numTicks)
+{
+	int err_r, err_l;
+	int Kp = 2;
+	int error = 0;
+
+	int dl, dr;
+	int l[2] = {0,0};
+	int r[2] = {0,0};
+
+	int travelSpeed = 90;  //Or whatever we want to move at
+	int leftMotorIn = travelSpeed, rightMotorIn = travelSpeed;
+
+	Count_Encoder_Left = 0;
+	Count_Encoder_Right = 0;
+
+
+	checkSensors_US();  //Or whatever this is supposed to be
+	l[1] = Distance_US_L;
+	r[1] = Distance_US_R;
+
+	while(Count_Encoder_Left < numTicks)
+	{
+		//get current measurement
+		checkSensors_US();
+		l[0] = Distance_US_L;
+		r[0] = Distance_US_R;
+
+		//compute differences
+		dl = l[0] - l[1];
+		dr = r[0] - r[1];
+
+		//compute errors
+		//error = target - actual
+		err_l = 0 - dl;
+		err_r = 0 - dr;
+
+
+		if(Distance_US_L < Distance_US_R) //left is closer, use the left, likely to be more reliable
+		{
+			error = 0 - err_l;
+		}
+		else if(Distance_US_R < Distance_US_L) //right is closer, use the right, likely to be more reliable
+		{
+			error = err_r;
+		}
+		else
+		{
+			error = 0; //if R = L then we are in the middle, maybe don't adjust?
+		}
+
+		rightMotorIn += error*Kp;
+
+		mtr_ctrl.setM2Speed(leftMotorIn);
+		mtr_ctrl.setM1Speed(rightMotorIn);
+
+
+		//update previous measurement
+		l[1] = l[0];
+		r[1] = r[0];
+
+	}
+
+	mtr_ctrl.setSpeeds(STOP,STOP);
+
+} 
