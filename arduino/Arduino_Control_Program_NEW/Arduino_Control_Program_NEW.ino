@@ -60,7 +60,7 @@ const int CONV_FACTOR = 52;                     //counts per cm, 13 for cm 33 fo
 const int TURN_TICK_COUNT = 1016;               //number of ticks for a turn (sqrt((3.875^2)+(3^2))*(pi/2)*2.54 = cm
 
 //Distance Thresholds
-const int PICKUP_VICTIM_THRESHOLD = 70;                       //pickup victim at this Distance (mm)
+const int PICKUP_VICTIM_THRESHOLD = 72;                       //pickup victim at this Distance (mm) //original value 70
 const int VICTIM_AHEAD_THRESHOLD = 110;                       //victim is ahead of robot, start aligning (mm)
 const int PICKUP_TOLERANCE = 6;                         //use threshold - measurement and check tolerance (mm)
 const int DANGER_ZONE = PICKUP_VICTIM_THRESHOLD-PICKUP_TOLERANCE;   //Stop Immediately
@@ -110,6 +110,7 @@ void setup()
   pinMode(DIG_PIN_DIR_L,INPUT);       //changing DIG_PIN_DIR_2 to say left
   attachInterrupt(digitalPinToInterrupt(DIG_PIN_CLK_L),encoderInterruptLeft,RISING);
   Serial.begin(250000);
+  //Serial.begin(115200);
   mtr_ctrl.init();
 
 }
@@ -124,57 +125,65 @@ void loop()
 		instruction = Serial.read();
 		switch (instruction) {
 		  case GO:
-			distance = Serial.parseInt();
-			tickGoal = CONV_FACTOR * distance;
-			travelDistance_revision(tickGoal);
-     //adjust????
-			taskComplete();
-		  break;
+			  distance = Serial.parseInt();
+			  tickGoal = CONV_FACTOR * distance;
+			  travelDistance_revision(tickGoal);
+        //adjust????
+			  taskComplete();
+		    break;
 		  case TURN:
-			turnNum = Serial.parseInt();
-			turnDir = Serial.read();
-			for(int i = 0; i < turnNum; ++i)
-			{
-			  switch(turnDir)
+			  turnNum = Serial.parseInt();
+			  turnDir = Serial.read();
+			  for(int i = 0; i < turnNum; ++i)
 			  {
-				case 'L':
-				  //turnLeft_P();
-					turnLeft_tick(730);
-				  break;
-				case 'R':
-					turnRight_tick(723);
-				  break;
-				default:
-				  break;
+			    switch(turnDir)
+			    {
+				  case 'L':
+				    //turnLeft_P();
+					  turnLeft_tick(701);
+				    break;
+				  case 'R':
+					  turnRight_tick(701);
+				    break;
+				  default:
+				    break;
+			    }
+			    delay(2000);
 			  }
-			  delay(2000);
-			}
-      //adjust????
-			taskComplete();
-		  break;
+        //adjust????
+			  taskComplete();
+		    break;
 		  case PICKUP:
-			acquireTarget();
-			taskComplete();
-		  break;
+			  acquireTarget();
+			  taskComplete();
+		    break;
 		  case DROPOFF:
-			dropVictim();
-			raiseGripper();
-			taskComplete();
-		  break;
+			  dropVictim();
+			  raiseGripper();
+			  taskComplete();
+		    break;
 		  case MANIPULATE:
-			gripOption = Serial.read();     //send C for closed, O for open, U for up, D for down
-			manipulateGripper(gripOption);
-			taskComplete();
-		  break;
+        //if(Serial.available() > 0)
+        //{
+			    gripOption = Serial.read();     //send C for closed, O for open, U for up, D for down
+			    manipulateGripper(gripOption);
+			    taskComplete();
+        //}
+		    break;
 		  case RECOVER:
-      alignRobot();
-			taskComplete();
-		  break;
+        alignRobot();
+			  taskComplete();
+		    break;
 		  default: 
-		  break;
+		    break;
 		  
-		}
-  } 
+		}//end switch
+
+    while(Serial.available() > 0)
+      {Serial.read();}
+  
+  }//end if  
+  
 }
 
 //Interrupt routine for LS7184 chip 1 - Code based on ref 4
@@ -205,7 +214,7 @@ void acquireTarget()
 void travelToTarget_IR()
 {
     bool objectReached = false;
-    int acquireSlow = 55;
+    int acquireSlow = 60;
     accelFromStop(acquireSlow,1);    //go in reverse slowly
     objectReached = (abs(Distance_IR_L-PICKUP_VICTIM_THRESHOLD) <= PICKUP_TOLERANCE) || (abs(Distance_IR_R-PICKUP_VICTIM_THRESHOLD) <= PICKUP_TOLERANCE);
     while (objectReached == false)
@@ -285,12 +294,13 @@ void align()
 {
   int acquireSlow = 40;
   bool targetAcquired = false;
-  int PICKUP_TOLERANCE = 4;
+  int PICKUP_TOLERANCE = 3;
   int currentTime = millis();
   while (targetAcquired == false)
   {
     checkSensors();
-    if (abs(Distance_IR_L-Distance_IR_R) <= PICKUP_TOLERANCE)
+    //if (abs(Distance_IR_L-Distance_IR_R) <= PICKUP_TOLERANCE) //original line
+    if ((abs(PICKUP_VICTIM_THRESHOLD-Distance_IR_R) <= PICKUP_TOLERANCE)&& (abs(PICKUP_VICTIM_THRESHOLD-Distance_IR_R)<= PICKUP_TOLERANCE)) //try this
     {
       //pickup target
       grabVictim();
@@ -398,6 +408,7 @@ void dropVictim()
     }
   delay(TIME_DELAY);                     //wait 
   microServo.write(GRIP_OPEN);           //set gripper to 0 degrees = fully open
+  delay(TIME_DELAY);   
 } 
 
 void raiseGripper()
@@ -1216,11 +1227,14 @@ void travelDistance_revision(int numTicks)
 	int Kp = 2;
 	int error = 0;
 
+  int thresh = 5;   //SMS added to throw out high values
+  int danger = 7;   //SMS added in for danger theshold
+
 	int dl, dr;
 	int l[2] = {0,0};
 	int r[2] = {0,0};
 
-	int travelSpeed = 90;  //Or whatever we want to move at
+	int travelSpeed = 100;  //Or whatever we want to move at
 	int leftMotorIn = travelSpeed, rightMotorIn = travelSpeed;
 
 	Count_Encoder_Left = 0;
@@ -1231,6 +1245,7 @@ void travelDistance_revision(int numTicks)
 	l[1] = Distance_US_L;
 	r[1] = Distance_US_R;
 
+  //accelFromStop(travelSpeed,0);
 	while(Count_Encoder_Left < numTicks)
 	{
 		//get current measurement
@@ -1242,8 +1257,18 @@ void travelDistance_revision(int numTicks)
 		dl = l[0] - l[1];
 		dr = r[0] - r[1];
 
-		//compute errors
-		//error = target - actual
+    //SMS - added in to throw out high derivative values
+    if (dl > thresh)
+    {
+      dl = 0;
+    }
+    else if (dr > thresh)
+    {
+      dr = 0;
+    }
+
+	  //compute errors
+	  //error = target - actual
 		err_l = 0 - dl;
 		err_r = 0 - dr;
 
@@ -1251,10 +1276,12 @@ void travelDistance_revision(int numTicks)
 		if(Distance_US_L < Distance_US_R) //left is closer, use the left, likely to be more reliable
 		{
 			error = 0 - err_l;
+      Kp = 4;      
 		}
 		else if(Distance_US_R < Distance_US_L) //right is closer, use the right, likely to be more reliable
 		{
 			error = err_r;
+      Kp = 4;         
 		}
 		else
 		{
@@ -1271,6 +1298,8 @@ void travelDistance_revision(int numTicks)
 		l[1] = l[0];
 		r[1] = r[0];
 
+    //restore Kp
+    Kp = 2;
 	}
 
 	mtr_ctrl.setSpeeds(STOP,STOP);
