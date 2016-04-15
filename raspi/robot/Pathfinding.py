@@ -221,7 +221,8 @@ class PathFinder:
                 #if (self.corners[index] == (22,4) and self.corners[index+1] == (19,4)):
                 #    move_list.append('F:C')
                 #else:
-                move_list.append('F:' + str(distance2))
+                for x in range(distance2):
+                    move_list.append('F') #:' + str(distance2))
                 facing = direction
                 #print("facing: ", facing)
 
@@ -256,7 +257,8 @@ class PathFinder:
                 #if (self.corners[index] == (19,4) and self.corners[index+1] == (22,4)):
                 #    move_list.append('F:C')
                 #else:
-                move_list.append('F:' + str(distance2))
+                for x in range(distance2):
+                    move_list.append('F') #:' + str(distance2))
                 facing = direction
                 #print("facing: ", facing)
 
@@ -287,7 +289,8 @@ class PathFinder:
                     pass
                     #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
-                move_list.append('F:' + str(distance1))
+                for x in range(distance1):
+                    move_list.append('F') #:' + str(distance1))
                 facing = direction
                 #print("facing: ", facing)
 
@@ -318,7 +321,8 @@ class PathFinder:
                         move_list.append('T:CITY:ROTATE')
                     #move_list.append('F:' + str(distance1))
                     #print("previously facing: ", facing)
-                move_list.append('F:' + str(distance1))
+                for x in range(distance1):
+                    move_list.append('F') #:' + str(distance1))
                 facing = direction
                 #print("facing: ", facing)
             else:
@@ -337,50 +341,7 @@ class PathFinder:
         y = cvx - int(x_cm / 10.16)
         return (x,y)
 
-#################################
-#mutable grid of obstacle course#
-#################################
-class gridCourse():
-    def __init__(self, gridmap):
-        self.gridmap = numpy.array([
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
-            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #fifthloc: (1,19)
-            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1], 
 
-            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-            [1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1], #sixthloc: (4,1), fourthloc: (4,22)
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-
-
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,0,1],
-            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #thirdloc: (13,1)
-            [1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1],
-
-            [1,1,1, 1,1,1, 1,1,1, 1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1],
-            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #secondloc: (16,1)
-            [1,1,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1],
-
-            [1,1,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,0,1, 1,1,1],
-            [1,0,0, 0,0,0, 0,0,0, 0,0,1, 1,1,1, 1,1,1, 1,0,0, 0,0,1], #firstloc: (19,22), yellow: (19,1)
-            [1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
-
-            [1,1,1, 1,0,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1],
-            [1,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,1], #start: (22, 1), red: (22,22)
-            [1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1]])
-    
-    ##############
-    #get the grid#
-    ##############
-    def getgridmap(self):
-        return self.gridmap
 
 
 
