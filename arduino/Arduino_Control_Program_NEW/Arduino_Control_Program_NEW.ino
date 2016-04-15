@@ -111,6 +111,7 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(DIG_PIN_CLK_L),encoderInterruptLeft,RISING);
   Serial.begin(250000);
   //Serial.begin(115200);
+  delay(1000); 						//try this to fix serial
   mtr_ctrl.init();
 
 }
@@ -127,7 +128,7 @@ void loop()
 		  case GO:
 			  distance = Serial.parseInt();
 			  tickGoal = CONV_FACTOR * distance;
-			  travelDistance_revision(tickGoal);
+			  travelDistance_Enc(tickGoal);
         //adjust????
 			  taskComplete();
 		    break;
@@ -597,22 +598,6 @@ void turnRight_P()
     
 }
 
-/*
-void turnLeft_Experiment()
-{
-  int slow = 65;
-  int top = 90;
-  int Kp = 10;
-
-  int Count_R = 1016;
-  int Count_L = -1016;
-  
-  Count_Encoder_Left = 0;
-  Count_Encoder_Right = 0;
-
-  
-}
-*/
 
 void turnLeft_P_city(int leftTickCount)
 {
@@ -830,54 +815,54 @@ void manipulateGripper(char option)
   }
 }
 
-//void travelDistance_Enc(int numTicks)
-//{
-//   int speed = 100;					//set speed to go
-//   int followerSpeed = speed;//+5;   //right motor is the follower
-//   int leftAdjust = -6;
-//   int minSpeed = speed - 10;
-//   int maxSpeed = speed + 10 - leftAdjust;
-//   
-//   int error = 0;
-//   int Kp = 5; //10;
-//   int dangerCounter = 0;
-//   int dangerCountThresh = 2;
-//   Count_Encoder_Left = 0;
-//   Count_Encoder_Right = 0;
-//   int leftSpeed = speed;
-//   checkSensors();
-//   accelFromStop(speed, 0);
-//   while (abs(Count_Encoder_Left)<numTicks)
-//   {
-//      checkSensors();
-//      if(Distance_US_F > US_DANGER_THRESHOLD)
-//      {
-//        dangerCounter = 0;
-//        error = Count_Encoder_Left - Count_Encoder_Right;
-//        followerSpeed += error/Kp;
-//        if(followerSpeed >= maxSpeed) 
-//          followerSpeed = maxSpeed;
-//        else if(followerSpeed <= minSpeed) 
-//          followerSpeed = minSpeed; 
-//      }
-//      else
-//      {
-//        dangerCounter += 1;
-//        if(dangerCounter >= dangerCountThresh)
-//        {
-////          leftSpeed = STOP;
-////          followerSpeed = STOP;
-//          //maybe break?
-//          break;
-//        } 
-//      }
-//      mtr_ctrl.setM2Speed(leftSpeed+leftAdjust);
-//      mtr_ctrl.setM1Speed(followerSpeed);//+8); 
-//      delay(100);    //100-60 
-//   }
-//   mtr_ctrl.setM2Speed(STOP);
-//   mtr_ctrl.setM1Speed(STOP); 
-//}
+void travelDistance_Enc(int numTicks)
+{
+   int speed = 100;					//set speed to go
+   int followerSpeed = speed;//+5;   //right motor is the follower
+   int leftAdjust = -6;
+   int minSpeed = speed - 10;
+   int maxSpeed = speed + 10 - leftAdjust;
+   
+   int error = 0;
+   int Kp = 5; //10;
+   int dangerCounter = 0;
+   int dangerCountThresh = 2;
+   Count_Encoder_Left = 0;
+   Count_Encoder_Right = 0;
+   int leftSpeed = speed;
+   checkSensors();
+   accelFromStop(speed, 0);
+   while (abs(Count_Encoder_Left)<numTicks)
+   {
+      checkSensors();
+      if(Distance_US_F > US_DANGER_THRESHOLD)
+      {
+        dangerCounter = 0;
+        error = Count_Encoder_Left - Count_Encoder_Right;
+        followerSpeed += error/Kp;
+        if(followerSpeed >= maxSpeed) 
+          followerSpeed = maxSpeed;
+        else if(followerSpeed <= minSpeed) 
+          followerSpeed = minSpeed; 
+      }
+      else
+      {
+        dangerCounter += 1;
+        if(dangerCounter >= dangerCountThresh)
+        {
+          leftSpeed = STOP;
+          followerSpeed = STOP;
+          //maybe break?
+          break;
+        } 
+      }
+      mtr_ctrl.setM2Speed(leftSpeed+leftAdjust);
+      mtr_ctrl.setM1Speed(followerSpeed);//+8); 
+      delay(100);    //100-60 
+   }
+   mtr_ctrl.setM2Speed(STOP);
+   mtr_ctrl.setM1Speed(STOP); 
+}
 
 void travelDistance_Enc_Steve(int numTicks)						//Added to test
 {
@@ -999,6 +984,7 @@ prevR = Distance_US_R;
 
 //CURRENT VERSION THAT WE WERE USING			
 //SMS backup for current version of travel using encoders 4/11/16
+/*
 void travelDistance_Enc(int numTicks)
 {
    int speed = 100;          //set speed to go
@@ -1071,7 +1057,7 @@ void travelDistance_Enc(int numTicks)
      
      mtr_ctrl.setM2Speed(STOP);
      mtr_ctrl.setM1Speed(STOP); 
-}
+}*/
 
 int dangerCorrect(int counter)
 {
@@ -1228,7 +1214,7 @@ void travelDistance_revision(int numTicks)
 	int error = 0;
 
   int thresh = 5;   //SMS added to throw out high values
-  int danger = 7;   //SMS added in for danger theshold
+  int danger = 5;   //SMS added in for danger theshold
 
 	int dl, dr;
 	int l[2] = {0,0};
