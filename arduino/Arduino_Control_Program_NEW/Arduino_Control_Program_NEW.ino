@@ -128,6 +128,7 @@ void loop()
 		  case GO:
 			  distance = Serial.parseInt();
 			  tickGoal = CONV_FACTOR * distance;
+        //Serial.println(tickGoal);
 			  travelDistance_Enc(tickGoal);
         //adjust????
 			  taskComplete();
@@ -864,6 +865,7 @@ void travelDistance_Enc(int numTicks)
    mtr_ctrl.setM1Speed(STOP); 
 }
 
+/*
 void travelDistance_Enc_Steve(int numTicks)						//Added to test
 {
    int speed = 100;          //set speed to go
@@ -980,7 +982,7 @@ prevR = Distance_US_R;
 		 mtr_ctrl.setM2Speed(STOP);
 		 mtr_ctrl.setM1Speed(STOP); 
 }
-}
+}*/
 
 //CURRENT VERSION THAT WE WERE USING			
 //SMS backup for current version of travel using encoders 4/11/16
