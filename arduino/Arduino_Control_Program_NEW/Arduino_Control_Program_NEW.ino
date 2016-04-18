@@ -83,6 +83,8 @@ char turnDir;
 char gripOption;
 char instruction;
 int angle;
+int grids = 0;
+int distanceTravelled = 0;
 
 //Variables for LS7184 chips
 volatile long Count_Encoder_Left = 0;                             //tick count chip 1
@@ -126,12 +128,13 @@ void loop()
 		instruction = Serial.read();
 		switch (instruction) {
 		  case GO:
-			  distance = Serial.parseInt();
-			  tickGoal = CONV_FACTOR * distance;
-        //Serial.println(tickGoal);
-			  travelDistance_Enc(tickGoal);
+			  //distance = Serial.parseInt();
+			  //tickGoal = CONV_FACTOR * distance;
+			  //travelDistance_Enc(tickGoal);
+			  grids = Serial.parseInt();
+			  distanceTravelled = moveGridUnits(grids);
         //adjust????
-			  taskComplete();
+			  taskComplete(distanceTravelled);
 		    break;
 		  case TURN:
 			  turnNum = Serial.parseInt();
@@ -153,28 +156,28 @@ void loop()
 			    delay(2000);
 			  }
         //adjust????
-			  taskComplete();
+			  taskComplete(-1);
 		    break;
 		  case PICKUP:
 			  acquireTarget();
-			  taskComplete();
+			  taskComplete(-1);
 		    break;
 		  case DROPOFF:
 			  dropVictim();
 			  raiseGripper();
-			  taskComplete();
+			  taskComplete(-1);
 		    break;
 		  case MANIPULATE:
         //if(Serial.available() > 0)
         //{
 			    gripOption = Serial.read();     //send C for closed, O for open, U for up, D for down
 			    manipulateGripper(gripOption);
-			    taskComplete();
+			    taskComplete(-1);
         //}
 		    break;
 		  case RECOVER:
         alignRobot();
-			  taskComplete();
+			  taskComplete(-1);
 		    break;
 		  default: 
 		    break;
@@ -200,10 +203,10 @@ void encoderInterruptRight()
   Count_Encoder_Right = digitalRead(DIG_PIN_DIR_R) ? Count_Encoder_Right - 1: Count_Encoder_Right + 1;      //SMS changed from +/-
 }
 
-void taskComplete()
+void taskComplete(int distance)
 {
-  int leftDistance = Count_Encoder_Left/CONV_FACTOR; //convert ticks to cm, driving motor
-  sprintf(Buffer,"DistTravelled: %d\n",leftDistance);
+  //int leftDistance = Count_Encoder_Left/CONV_FACTOR; //convert ticks to cm, driving motor
+  sprintf(Buffer,"DistTravelled: %d\n",distance);
   Serial.print(Buffer);
 }
 
@@ -686,13 +689,13 @@ void turnLeft_P_city(int leftTickCount)
     {
       break;
     }
-    Serial.print("Encoder Left: ");
-  Serial.print(Count_Encoder_Left);
-  Serial.print(" Encoder Right: ");
-  Serial.print(Count_Encoder_Right);
-  Serial.println();
+    //Serial.print("Encoder Left: ");
+  //Serial.print(Count_Encoder_Left);
+  //Serial.print(" Encoder Right: ");
+  //Serial.print(Count_Encoder_Right);
+  //Serial.println();
+  
   }
-
   //delay(1000);
   mtr_ctrl.setSpeeds(STOP,STOP);
   
@@ -816,7 +819,8 @@ void manipulateGripper(char option)
   }
 }
 
-void travelDistance_Enc(int numTicks)
+//This is the old encoder function SMS 4/17/16
+int travelDistance_Enc(int numTicks)
 {
    int speed = 100;					//set speed to go
    int followerSpeed = speed;//+5;   //right motor is the follower
@@ -863,6 +867,7 @@ void travelDistance_Enc(int numTicks)
    }
    mtr_ctrl.setM2Speed(STOP);
    mtr_ctrl.setM1Speed(STOP); 
+   return Count_Encoder_Left/52;
 }
 
 /*
@@ -1203,10 +1208,10 @@ void alignRobot()
   }
   
   checkSensors_IR(); 
-  Serial.print("Left = ");
-  Serial.print(Distance_IR_L);
-  Serial.print("Right = ");
-  Serial.println(Distance_IR_R);
+//  Serial.print("Left = ");
+//  Serial.print(Distance_IR_L);
+//  Serial.print("Right = ");
+//  Serial.println(Distance_IR_R);
 }
 
 void travelDistance_revision(int numTicks)
@@ -1293,3 +1298,133 @@ void travelDistance_revision(int numTicks)
 	mtr_ctrl.setSpeeds(STOP,STOP);
 
 } 
+
+int moveGridUnits(int numGrids)
+{
+	int fullMoves = numGrids / 3;
+	int remainder = numGrids % 3;
+	
+	int totalDistance = 0; //cm 
+	int x; //cm
+	int d; //cm
+	
+	int ticks3Units = 1585;
+	int ticks2Units = 1057;
+	int ticks1Units = 528;
+	
+	int leftUS[2] = {0,0};
+	int rightUS[2] = {0,0};
+	
+	int diff_L = 0;
+	int diff_R = 0;
+	
+	checkSensors_IR();
+	if (Distance_IR_L <= 300 && Distance_IR_R <= 300)
+	{
+		alignRobot();
+		delay(500); //wait for bot to lose momentum
+	}
+
+	for(int i = 0; i < fullMoves; ++i) 
+	{
+		checkSensors_US();
+		leftUS[0] = Distance_US_L;
+		rightUS[0] = Distance_US_R;
+		
+		d = travelDistance_Enc(ticks3Units);
+		
+		checkSensors_US();
+		leftUS[1] = Distance_US_L;
+		rightUS[1] = Distance_US_R;
+		
+		diff_L = leftUS[1] - leftUS[0];
+		diff_R = rightUS[1] - rightUS[0];
+
+    delay(500);
+		
+		if (diff_L < diff_R)
+		{
+			x = sqrt(d*d - diff_L*diff_L);
+      if(abs(diff_L) > 2)
+			  turnRight_P_city((64687*abs(diff_L))/(d*1000));
+		}
+		else if(diff_R <= diff_L)
+		{
+			x = sqrt(d*d - diff_R*diff_R);
+			if(abs(diff_R) > 2)
+			  turnLeft_P_city((64687*abs(diff_R))/(d*1000));
+		}
+		
+		totalDistance += x;
+
+    delay(500);
+	}
+	
+	if(remainder == 2)
+	{
+		checkSensors_US();
+		leftUS[0] = Distance_US_L;
+		rightUS[0] = Distance_US_R;
+		
+		d = travelDistance_Enc(ticks2Units);
+		
+		checkSensors_US();
+		leftUS[1] = Distance_US_L;
+		rightUS[1] = Distance_US_R;
+		
+		diff_L = leftUS[1] - leftUS[0];
+		diff_R = rightUS[1] - rightUS[0];
+
+    delay(500);
+    
+		if (leftUS[1] < rightUS[1])
+		{
+			x = sqrt(d*d - diff_L*diff_L);
+      //if(abs(diff_L) > 2)
+			  //turnRight_P_city((64687*abs(diff_L))/(d*1000));
+		}
+		else if(leftUS[1] >= rightUS[1])
+		{
+			x = sqrt(d*d - diff_R*diff_R);
+      //if(abs(diff_R) > 2)
+			  //turnLeft_P_city((64687*abs(diff_R))/(d*1000));
+		}
+		
+		totalDistance += x;
+	}
+	else if(remainder == 1)
+	{
+		checkSensors_US();
+		leftUS[0] = Distance_US_L;
+		rightUS[0] = Distance_US_R;
+		
+		d = travelDistance_Enc(ticks1Units);
+		
+		checkSensors_US();
+		leftUS[1] = Distance_US_L;
+		rightUS[1] = Distance_US_R;
+		
+		diff_L = leftUS[1] - leftUS[0];
+		diff_R = rightUS[1] - rightUS[0];
+
+    delay(500);
+    
+		if (leftUS[1] < rightUS[1])
+		{
+			x = sqrt(d*d - diff_L*diff_L);
+      //if(abs(diff_L) > 2)
+			  //turnRight_P_city((64687*abs(diff_L))/(d*1000));
+		}
+		else if(leftUS[1] >= rightUS[1])
+		{
+			x = sqrt(d*d - diff_R*diff_R);
+      //if(abs(diff_R) > 2)
+			  //turnLeft_P_city((64687*abs(diff_R))/(d*1000));
+		}
+		
+		totalDistance += x;
+	}
+	
+	return totalDistance;
+}
+
