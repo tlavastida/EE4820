@@ -48,10 +48,10 @@ class Robot:
         
         
     #updates grid positions in the map using an encoder reading
-    def update_grid_position(self,encoder1,encoder2):
-        avg = (encoder1+encoder2)//2 #integer division for now, maybe try floating point plus round later
-        self.grid_x += self.dx*avg   #FIX LATER - NEED CORRECT CONVERSION FACTOR TO GRID SPACE
-        self.grid_y += self.dy*avg   #FIX LATER - NEED CORRECT CONVERSION FACTOR TO GRID SPACE
+    #def update_grid_position(self,encoder1,encoder2):
+    #    avg = (encoder1+encoder2)//2 #integer division for now, maybe try floating point plus round later
+    #    self.grid_x += self.dx*avg   #FIX LATER - NEED CORRECT CONVERSION FACTOR TO GRID SPACE
+    #    self.grid_y += self.dy*avg   #FIX LATER - NEED CORRECT CONVERSION FACTOR TO GRID SPACE
 
     #abstracting the pattern from the other functions I wrote:
     def exec_cmd(self,cmd_str):
@@ -147,7 +147,7 @@ class Robot:
 
     def detectVictim(self):
         with picamera.array.PiRGBArray(self.cam) as stream:
-            self.cam.capture(stream, format='bgr')
+            self.cam.capture( stream, format='bgr', resize=(320,240) )
             # At this point the image is available as stream.array
             image = stream.array
             return color_filter.detectVictim(image)
@@ -155,24 +155,89 @@ class Robot:
         #img = self.stream.array
         #return color_filter.detectVictim(img)
         
+
+def turn_test():
+    sara = Robot()
+    
+    sara.turn_left()
+    time.sleep(2.0)
+    sara.turn_right()
         
+    #signify end of test
+    sara.close_grip()
+    time.sleep(1.0)
+    sara.open_grip()
+    #done
+
+
+def forward_test():
+    sara = Robot()
+
+    sara.forward(300)
+
+    #signify end of test
+    sara.close_grip()
+    time.sleep(1.0)
+    sara.open_grip()
+    #done
+
+def camera_test():
+    sara = Robot()
+
+
+
 def main_loop():
 
     sara = Robot()
     grid = Pathfinding.gridCourse(None)
     pathfind = Pathfinding.PathFinder(grid.gridmap)
 
-    targetList = [(19,22), (16,1), (13,1), (4,22), (1,19), (4,1)]
+    targetList = [(19,21), (16,2), (13,2), (5,22), (1,20), (3,1)]
+    victimNodes = { targetList[0]:(19,22), targetList[1]:(16,1), targetList[2]:(13,1), targetList[3]:(4,22), targetList[4]:(1,19), targetList[5]:(4,1) }
+
 
     startpos = (22,1)
     sara.grid_x = 22
     sara.grid_y = 1
 
+    for target in targetList:    #maybe use pop
+        pathfind.findCorners( (sara.grid_x,sara.grid_y), target)
+        actions = pathfind.actionList( sara.direction() )
+
+        #carry out all the moves
+        for move in actions:
+            words = move.split(':')
+
+            if words[0] == 'F':
+                pass #move forward
+
+            elif words[0] == 'T':
+                pass #turns ...
+                
+            else:
+                pass #default case
+
+            time.sleep(1.5)
+
+                
+        #turn around to check for victim
+        sara.about_face()
+        time.sleep(1.5)
+
+        #check for victim
+        if sara.detectVictim():
+            sara.pickup()
+            #find return path
+            sara.grid_x = target[0] - sara.dx
+            sara.grid_y = target[1] - sara.dy
+
+
+    
 def test_run():
     sara = Robot()
     time.sleep(2)
-    grid = Pathfinding.gridCourse(None)
-    pathfind = Pathfinding.PathFinder(grid.gridmap)
+    #grid = Pathfinding.gridCourse(None)
+    pathfind = Pathfinding.PathFinder()  #grid.gridmap)
 
     sara.grid_x = 22
     sara.grid_y = 1
@@ -190,7 +255,7 @@ def test_run():
         words = move.split(':')
         if words[0] == 'F':
             grid_dist = int(words[1])
-            cms = 10*grid_dist
+            cms = (1016*grid_dist)//1000   #this bitch right here
             print(cms)
             msg = sara.forward(cms)
         elif words[0] == 'T' and words[1] == 'R':
@@ -271,6 +336,7 @@ def interactive_main_loop():
         
 if __name__ == '__main__':
     #interactive_main_loop()
-    test_run()
-    
+    #test_run()
+    #forward_test()
+    print('Script is running ... ')    
     

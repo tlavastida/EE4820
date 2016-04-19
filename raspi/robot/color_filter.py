@@ -73,10 +73,13 @@ def detectVictim(img):
     print('Red Score = ' + str(totalRed))
     print('Yellow Score = ' + str(totalYellow))
     
-    if totalRed >= threshold or totalYellow >= threshold:
-        return True
+    if totalRed >= threshold and totalRed > totalYellow:
+        return (True,'RED')
+    elif totalYellow >= threshold and totalYellow >= totalRed:
+        return (True,'YELLOW')
     else:
-        return False
+        return (False,'NA')
+    
     
 if __name__ == '__main__':
 
