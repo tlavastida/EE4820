@@ -1160,7 +1160,6 @@ int moveDistanceWithAdjust(int distance_cms)
 		diff_L = leftUS[1] - leftUS[0];
 		diff_R = rightUS[1] - rightUS[0];
 		
-		avgWallDistance = (leftUS[1] + rightUS[1]) >> 1; // (l+r)/2
 		
 		delay(500);
 		
@@ -1180,14 +1179,6 @@ int moveDistanceWithAdjust(int distance_cms)
 			}
 			//if left[1] == left[0] do nothing
 			
-			//turn towards the center if necessary
-			if( leftUS[1] <= wallThreshold && i+1 != num_moves ) //don't do it in the last iteration
-			{
-				delay(500);
-				//too close to the wall, turn towards center
-				angleTickCount = (64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 1000);
-				turn_R_P(angleTickCount);
-			}
 			
 			approxDistance = sqrt( legDistance * legDistance - (diff_L * diff_L) / 100 );  //because legDistance is in cms and diff_L is in mms
 			
@@ -1208,13 +1199,7 @@ int moveDistanceWithAdjust(int distance_cms)
 			// if right[1] == right[0] do nothing
 			
 			//turn towards the center if necessary
-			if( rightUS[1] <= wallThreshold && i+1 != num_moves ) ////don't do it in the last iteration
-			{
-				delay(500);
-				//too close to the wall, turn towards the center
-				angleTickCount = (64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 1000);
-				turn_L_P(angleTickCount);
-			}
+			
 			
 			approxDistance = sqrt( legDistance * legDistance - ( diff_R * diff_R ) / 100  );  //because legDistance is in cms and diff_R is in mms
 			
@@ -1224,6 +1209,32 @@ int moveDistanceWithAdjust(int distance_cms)
       approxDistance = legDistance;
     }
 		//else if diff_L == 0 and diff_R == 0 then  no adjustments
+
+    if( leftUS[1] > 140 || rightUS[1] > 140 )
+    {
+      avgWallDistance = 70;
+    }
+    else 
+    {
+      avgWallDistance = (leftUS[1] + rightUS[1]) >> 1; // (l+r)/2
+    }
+
+    //turn towards the center if necessary
+    if( leftUS[1] <= wallThreshold && i+1 != num_moves ) //don't do it in the last iteration
+    {
+      delay(500);
+      //too close to the wall, turn towards center
+      angleTickCount = (64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 1000);
+      turn_R_P(angleTickCount);
+    }
+    else if( rightUS[1] <= wallThreshold && i+1 != num_moves ) ////don't do it in the last iteration
+    {
+      delay(500);
+      //too close to the wall, turn towards the center
+      angleTickCount = (64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 1000);
+      turn_L_P(angleTickCount);
+    }
+
 		
 		totalDistance += approxDistance;
 		approxDistance = 0;
