@@ -1063,3 +1063,157 @@ long checkUS_mm (int pinNumUS)
   return cm;                                  // returns cm distance
 }
 
+
+// input - target distance to travel in centimeters
+// output - approximate distance actually travelled in centimeters
+// side effects - the robot makes a series of forward movements
+// and adjustments to avoid touching the left and right walls.
+// 
+// cases:
+// 1. angle is approx 0 and it is close enough to the middle of the corridor - no adjustment
+// 2. angle is > 0 and it is too close to a wall - adjust to angle 0 and make an extra adjustment to move towards center
+int moveDistanceWithAdjust(int distance_cms)
+{
+	//variable declarations for movement
+	int num_moves = 1;
+	int moveDistance = 0; //cm
+	int totalDistance = 0; //cm 
+	int legDistance = 0;
+	int remainderDistance = 0;
+	int approxDistance = 0; //cm
+	
+	
+	//variable declarations for sensors
+	int leftUS[2] = {0,0};
+	int rightUS[2] = {0,0};
+	int diff_L = 0;
+    int diff_R = 0; 
+	int avgWallDistance = 0;
+	
+	//variables for angle calculation
+	int wallThreshold = 50; //mms
+	int angleTickCount = 0;
+	
+	//compute number of moves to make first
+	if( distance_cms > 0 && distance_cms <= 30 )
+	{
+		num_moves = 1;
+	}
+	else if( distance_cms > 30 && distance_cms <= 60 )
+	{
+		num_moves = 2;
+	}
+	else if( distance_cms > 60 && distance_cms <= 120 )
+	{	
+		num_moves = 3;
+	}
+	else if( distance_cms > 120 )
+	{
+		num_moves = 4;
+	}
+
+	//calculate distance per move
+	moveDistance = distance_cms / num_moves;
+	remainderDistance = distance_cms % num_moves; // should be 0,1,2, or 3 at most, maybe negligible
+	
+	
+	//align before moving if able to.
+	checkSensors_IR_T();
+	if (Distance_IR_L_T <= 110 && Distance_IR_R_T <= 110)
+	{
+		alignRobot();
+		delay(500); //wait for bot to lose momentum
+	}
+	
+	
+	//do each move
+	for(int i = 0; i < num_moves; ++i)
+	{
+		//first get sensor readings before the move
+		filtered_US(); //update the sensor readings
+		leftUS[0] = Distance_US_L;
+		rightUS[0] = Distance_US_R;
+		
+		//do the move
+		legDistance = travelDistance_Enc( moveDistance * CONV_FACTOR );
+		
+		//get sensor readings after completing the move
+		filtered_US();
+		leftUS[1] = Distance_US_L;
+		rightUS[1] = Distance_US_R;
+		
+		diff_L = leftUS[1] - leftUS[0];
+		diff_R = rightUS[1] - rightUS[0];
+		
+		avgWallDistance = (leftUS[1] + rightUS[1]) >> 1; // (l+r)/2
+		
+		delay(500);
+		
+		if( diff_L < 0 ) //use the left side
+		{
+			//compute angle to adjust by
+			angleTickCount =  (64687 * abs( diff_L )) / (legDistance * 1000);
+			
+			//decide which direction to turn
+			if( leftUS[1] < leftUS[0] )
+			{
+				turn_R_P(angleTickCount);
+			}
+			else if(leftUS[1] > leftUS[0])
+			{
+				turn_L_P(angleTickCount);
+			}
+			//if left[1] == left[0] do nothing
+			
+			//turn towards the center if necessary
+			if( leftUS[1] <= wallThreshold )
+			{
+				delay(500);
+				//too close to the wall, turn towards center
+				angleTickCount = (64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 1000);
+				turn_R_P(angleTickCount);
+			}
+			
+			approxDistance = sqrt( legDistance * legDistance - diff_L * diff_L );
+			
+		}
+		else if( diff_R < 0 ) //use the righ side
+		{
+			//compute angle to adjust by
+			angleTickCount = (64687 * abs( diff_R )) / (legDistance * 1000);
+			
+			if( rightUS[1] < rightUS[0] )
+			{
+				turn_L_P(angleTickCount);
+			}
+			else if(leftUS[1] > leftUS[0])
+			{
+				turn_R_P(angleTickCount);
+			}
+			// if right[1] == right[0] do nothing
+			
+			//turn towards the center if necessary
+			if( rightUs[1] <= wallThreshold )
+			{
+				delay(500);
+				//too close to the wall, turn towards the center
+				angleTickCount = (64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 1000);
+				turn_L_P(angleTickCount);
+			}
+			
+			approxDistance = sqrt( legDistance * legDistance - diff_R * diff_R );
+			
+		}
+		//else if diff_L == 0 and diff_R == 0 then  no adjustments
+		
+		totalDistance += approxDistance;
+		approxDistance = 0;
+		angleTickCount = 0;
+		
+		delay(500); //delay to lose momentum before next move
+	}
+	
+	return totalDistance;
+}
+
+
