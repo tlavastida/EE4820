@@ -130,25 +130,30 @@ void loop() {
         
         switch (cmd)
         {
+			//Check bottom IR sensors - for testing purposes only
           case 'I':
             checkSensors_IR_B();
             printIRsensorValues_B();
             taskComplete(0);
           break;
+		  //Check top IR sensors - for testing purposes only
           case 'J':
             checkSensors_IR_T();
             printIRsensorValues_T();
             taskComplete(0);
           break;
+		  //check US sensors - for testing purposes only
           case 'U':
             checkSensors_US();
             printUSsensorValues();
             taskComplete(0);
           break;
+		  //Manipulate gripper arm
           case 'M':
             manipulateGripper(mod);
             taskComplete(0);
           break;
+		  //Turn L/R
           case 'T':
               for(int i = 0; i < num; ++i)
               {
@@ -168,6 +173,7 @@ void loop() {
             taskComplete(0);
             delay(2000);
           break;
+		  //Travel - for testing, need to update to move grid squares
           case 'G':
             if (num > 0)
             {
@@ -181,10 +187,12 @@ void loop() {
             taskComplete(distanceTravelled);
             distanceTravelled = 0;
           break;
+		  //Recover, uses the top IR sensors to align to wall
           case 'R':
             alignRobot();
             taskComplete(0);
           break;
+		  //Pickup target after travelling and aligning
           case 'P':
             travelToTarget_IR();
             delay(2000);
@@ -206,6 +214,8 @@ void loop() {
     delay(1000);
 }
 
+//Send distance travelled after an action is completed
+//For handshaking with the pi, mostly useful for travel distance
 void taskComplete(int distance)
 {
   Serial.flush();
@@ -225,6 +235,7 @@ void printUSsensorValues()
   Serial.println();
 }
 
+//For debugging, remove later
 void printIRsensorValues_B()
 {
   Serial.print(Distance_IR_L_B);
@@ -233,6 +244,7 @@ void printIRsensorValues_B()
   Serial.println();
 }
 
+//For debugging, remove later
 void printIRsensorValues_T()
 {
   Serial.print(Distance_IR_L_T);
@@ -241,13 +253,14 @@ void printIRsensorValues_T()
   Serial.println();
 }
 
-//Use this to measure the IR sensor distance
+//Use this to measure the bottom IR sensor distance
 void checkSensors_IR_B()
 {
   Distance_IR_L_B = checkIR(ANALOG_PIN_IR_L_B);
   Distance_IR_R_B = checkIR(ANALOG_PIN_IR_R_B);
 }
 
+//Use this to measure the top IR sensor distance
 void checkSensors_IR_T()
 {
   Distance_IR_L_T = checkIR(ANALOG_PIN_IR_L_T);
@@ -262,13 +275,15 @@ long checkIR (int pinNumIR)
   return distanceValue;                                       //mm
 }
 
+//Use this to measure the US sensor distance 
 void checkSensors_US()
 {
   Distance_US_L = checkUS(DIG_PIN_US_L);
-  Distance_US_R = checkUS(DIG_PIN_US_R);
   Distance_US_F = checkUS(DIG_PIN_US_F);
+  Distance_US_R = checkUS(DIG_PIN_US_R);
 }
 
+//This calculates the distance for the ultrasonic readings
 long checkUS (int pinNumUS)
 {
   digitalWrite(pinNumUS,LOW);                 // make sure pin is low before pulsing
@@ -280,9 +295,10 @@ long checkUS (int pinNumUS)
   pinMode(pinNumUS,INPUT);                    // change pin to Input mode for return pulse
   pulseWidth = pulseIn(pinNumUS,HIGH,18500);  // wait for return pulse. Timeout after 18.5 milliseconds
   cm = pulseWidth/58;                         // Convert to centimeters, use 58 for Mega
-  return cm;                                  //returns cm distance
+  return cm;                                  // returns cm distance
 }
 
+//Manipulates the gripper arm
 void manipulateGripper(char option)
 {
   if (option == 'C')
@@ -327,6 +343,7 @@ void encoderInterruptRight()
   Count_Encoder_R = digitalRead(DIG_PIN_DIR_R) ? Count_Encoder_R - 1: Count_Encoder_R + 1;      
 }
 
+//Turn Right
 void turn_R(int tickGoal)
 {
   Count_Encoder_L = 0;delayMicroseconds(100);
@@ -343,6 +360,7 @@ void turn_R(int tickGoal)
   delay(100);
 }
 
+//Turn Left
 void turn_L(int tickGoal)
 {
   Count_Encoder_L = 0;delayMicroseconds(100);
@@ -359,13 +377,14 @@ void turn_L(int tickGoal)
   delay(100);
 }
 
+//Travel a distance based on ticks, called by the go grid units function
 int travelDistance_Enc(int numTicks)
 {
    int speed = 100;          //set speed to go
    int followerSpeed = speed; //right motor is the follower
    int leftAdjust = -7;
    int minSpeed = speed - 10;
-   int maxSpeed = speed + 10 + leftAdjust;
+   int maxSpeed = speed + 10;
    
    int error = 0;
    int Kp = 5; //10;
@@ -374,6 +393,7 @@ int travelDistance_Enc(int numTicks)
    Count_Encoder_L = 0;delayMicroseconds(100);
    Count_Encoder_R = 0;delayMicroseconds(100);
    int leftSpeed = speed;
+
    checkSensors_US();
    accelFromStop(speed, FORWARD);
    while (Count_Encoder_L <numTicks)
@@ -415,6 +435,8 @@ int travelDistance_Enc(int numTicks)
 // LEFT     ---- 2
 // RIGHT    ---- 3
 // default ---- return? 
+//This function ramps up the speed so that there is enough 
+//power to move the robot and then decreases speed to input
 void accelFromStop(int input , int code)
 {
   //assert input > 0
@@ -463,6 +485,7 @@ void accelFromStop(int input , int code)
   }
 }
 
+//Align the robot to a wall. Must be within a certain distance (upperThresh)
 void alignRobot()
 {
   int tol = 1;          //mm
@@ -522,6 +545,67 @@ void alignRobot()
   printIRsensorValues_T();
 }
 
+//Align the robot to a wall. Must be within a certain distance (upperThresh)
+void alignRobot2()
+{
+  int tol = 1;          //mm
+  int goTicks = 0;
+  int distanceAvg_L = 0;
+  int distanceAvg_R = 0;
+  int upperThresh = 110;
+
+  checkSensors_IR_B();
+
+  for (int i = 0;i<10;i++)
+      {
+        checkSensors_IR_B();
+        distanceAvg_L += Distance_IR_L_B;
+        distanceAvg_R += Distance_IR_R_B;
+      } 
+    
+  distanceAvg_L = distanceAvg_L/10;
+  distanceAvg_R = distanceAvg_R/10;
+  
+  if (distanceAvg_L < upperThresh && distanceAvg_R < upperThresh)
+  {
+    while (abs(Distance_IR_L_B - Distance_IR_R_B) > tol)
+    {
+      for (int i = 0;i<10;i++)
+      {
+        checkSensors_IR_B();
+        distanceAvg_L += Distance_IR_L_B;
+        distanceAvg_R += Distance_IR_R_B;
+      } 
+    
+      distanceAvg_L = distanceAvg_L/10;
+      distanceAvg_R = distanceAvg_R/10;
+      
+      bool thresh = abs(distanceAvg_L - distanceAvg_R) <= tol;
+    
+        if (distanceAvg_L < distanceAvg_R && !thresh)
+        {
+          //adjust left
+          goTicks = (64687*(distanceAvg_R-distanceAvg_L))/(101*100);
+          turn_L_P(goTicks);
+        }
+        else if (distanceAvg_R < distanceAvg_L && !thresh)
+        {
+          //adjust right
+          goTicks = (64687*(distanceAvg_L-distanceAvg_R))/(101*100);
+          turn_R_P(goTicks);
+        }
+        mtr_ctrl.setM1Speed(STOP);
+        mtr_ctrl.setM2Speed(STOP);
+        delay(1000);
+        distanceAvg_L = 0;
+        distanceAvg_R = 0;
+    }//end while
+  }//end if
+  checkSensors_IR_B(); 
+  printIRsensorValues_B();
+}
+
+//Turn Left using proportional control
 void turn_L_P(int leftTickCount)
 {
   int SLOW = 65;
@@ -611,6 +695,7 @@ void turn_L_P(int leftTickCount)
   
 }
 
+//Turn Right using proportional control
 void turn_R_P(int rightTickCount)
 {
   int SLOW = 60;
@@ -694,6 +779,7 @@ void turn_R_P(int rightTickCount)
   
 }  
 
+//Travel in reverse to get to target
 void travelToTarget_IR()
 {
     bool objectReached = false;
@@ -745,6 +831,7 @@ void travelToTarget_IR()
     mtr_ctrl.setM2Speed(STOP);
 }
 
+//Rotate until aligned with target
 void align()
 {
   int acquireSlow = 70;
