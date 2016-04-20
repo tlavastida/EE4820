@@ -40,7 +40,7 @@ volatile long Distance_IR_L_T,Distance_IR_R_T;        //These are for the top IR
 const int THRESHOLD = 5;                         //used to check if IR sensors approx. equal (mm)
 
 //Variables for US sensors
-long pulseWidth,cm;                             
+long pulseWidth,cm,mm;                             
 volatile long Distance_US_L,Distance_US_R,Distance_US_F; 
 const long US_DANGER_THRESHOLD = 9;         //Volatile but treat as a constant
 
@@ -175,15 +175,7 @@ void loop() {
           break;
 		  //Travel - for testing, need to update to move grid squares
           case 'G':
-            if (num > 0)
-            {
-              tickGoal = CONV_FACTOR * num;  //int
-              distanceTravelled = travelDistance_Enc(tickGoal);
-            }
-            else
-            {
-              distanceTravelled = 0;
-            }
+            distanceTravelled = moveGridUnits(num);
             taskComplete(distanceTravelled);
             distanceTravelled = 0;
           break;
@@ -200,6 +192,11 @@ void loop() {
             distanceTravelled = Count_Encoder_L/CONV_FACTOR;
             taskComplete(distanceTravelled);
             distanceTravelled = 0;
+          break;
+          case 'F':
+            filtered_US();
+            printUSsensorValues();
+            taskComplete(0);
           break;
           default:
             taskComplete(0);
@@ -295,6 +292,7 @@ long checkUS (int pinNumUS)
   pinMode(pinNumUS,INPUT);                    // change pin to Input mode for return pulse
   pulseWidth = pulseIn(pinNumUS,HIGH,18500);  // wait for return pulse. Timeout after 18.5 milliseconds
   cm = pulseWidth/58;                         // Convert to centimeters, use 58 for Mega
+  delayMicroseconds(200);                     //short delay before using another US
   return cm;                                  // returns cm distance
 }
 
@@ -892,5 +890,176 @@ void align()
   }
       mtr_ctrl.setM1Speed(STOP);
       mtr_ctrl.setM2Speed(STOP);
+}
+
+int moveGridUnits(int numGrids)
+{
+  //Use function (filtered_US())for filtered US readings. L/R are mm, F is still cm 
+  //Distance_US_L,Distance_US_R, and Distance_US_F are still applicable
+  int fullMoves = numGrids / 3;
+  int remainder = numGrids % 3;
+  
+  int totalDistance = 0; //cm 
+  int x; //cm
+  int d; //cm
+  
+  int ticks3Units = 1585;
+  int ticks2Units = 1057;
+  int ticks1Units = 528;
+  
+  int leftUS[2] = {0,0};
+  int rightUS[2] = {0,0};
+  
+  int diff_L = 0;
+  int diff_R = 0;
+  
+  checkSensors_IR_T();
+  if (Distance_IR_L_T <= 110 && Distance_IR_R_T <= 110)
+  {
+    alignRobot();
+    delay(500); //wait for bot to lose momentum
+  }
+
+  for(int i = 0; i < fullMoves; ++i) 
+  {
+    checkSensors_US();
+    leftUS[0] = Distance_US_L;
+    rightUS[0] = Distance_US_R;
+    
+    d = travelDistance_Enc(ticks3Units);
+    
+    checkSensors_US();
+    leftUS[1] = Distance_US_L;
+    rightUS[1] = Distance_US_R;
+    
+    diff_L = leftUS[1] - leftUS[0];
+    diff_R = rightUS[1] - rightUS[0];
+
+    delay(500);
+    
+    if (diff_L < diff_R)
+    {
+      x = sqrt(d*d - diff_L*diff_L);
+      if(abs(diff_L) > 2)
+        turn_R_P((64687*abs(diff_L))/(d*1000));
+    }
+    else if(diff_R <= diff_L)
+    {
+      x = sqrt(d*d - diff_R*diff_R);
+      if(abs(diff_R) > 2)
+        turn_L_P((64687*abs(diff_R))/(d*1000));
+    }
+    
+    totalDistance += x;
+
+    delay(500);
+  }
+  
+  if(remainder == 2)
+  {
+    checkSensors_US();
+    leftUS[0] = Distance_US_L;
+    rightUS[0] = Distance_US_R;
+    
+    d = travelDistance_Enc(ticks2Units);
+    
+    checkSensors_US();
+    leftUS[1] = Distance_US_L;
+    rightUS[1] = Distance_US_R;
+    
+    diff_L = leftUS[1] - leftUS[0];
+    diff_R = rightUS[1] - rightUS[0];
+
+    delay(500);
+    
+    if (leftUS[1] < rightUS[1])
+    {
+      x = sqrt(d*d - diff_L*diff_L);
+      //if(abs(diff_L) > 2)
+        //turnRight_P_city((64687*abs(diff_L))/(d*1000));
+    }
+    else if(leftUS[1] >= rightUS[1])
+    {
+      x = sqrt(d*d - diff_R*diff_R);
+      //if(abs(diff_R) > 2)
+        //turnLeft_P_city((64687*abs(diff_R))/(d*1000));
+    }
+    
+    totalDistance += x;
+  }
+  else if(remainder == 1)
+  {
+    checkSensors_US();
+    leftUS[0] = Distance_US_L;
+    rightUS[0] = Distance_US_R;
+    
+    d = travelDistance_Enc(ticks1Units);
+    
+    checkSensors_US();
+    leftUS[1] = Distance_US_L;
+    rightUS[1] = Distance_US_R;
+    
+    diff_L = leftUS[1] - leftUS[0];
+    diff_R = rightUS[1] - rightUS[0];
+
+    delay(500);
+    
+    if (leftUS[1] < rightUS[1])
+    {
+      x = sqrt(d*d - diff_L*diff_L);
+      //if(abs(diff_L) > 2)
+        //turnRight_P_city((64687*abs(diff_L))/(d*1000));
+    }
+    else if(leftUS[1] >= rightUS[1])
+    {
+      x = sqrt(d*d - diff_R*diff_R);
+      //if(abs(diff_R) > 2)
+        //turnLeft_P_city((64687*abs(diff_R))/(d*1000));
+    }
+    
+    totalDistance += x;
+  }
+  
+  return totalDistance;
+}
+
+void filtered_US()
+{
+  int distanceAvg_L = 0;
+  int distanceAvg_R = 0;
+  
+  for (int i = 0;i<4;i++)
+      {
+        checkSensors_US_mm();
+        distanceAvg_L += Distance_US_L;
+        distanceAvg_R += Distance_US_R;
+      } 
+    
+  Distance_US_L = distanceAvg_L>>2;
+  Distance_US_R = distanceAvg_R>>2;
+}
+
+//Used exclusively by the go grid squares function
+void checkSensors_US_mm()
+{
+  Distance_US_L = checkUS_mm(DIG_PIN_US_L);
+  Distance_US_F = checkUS(DIG_PIN_US_F);
+  Distance_US_R = checkUS_mm(DIG_PIN_US_R);
+}
+
+//Used exclusively by the go grid squares function
+long checkUS_mm (int pinNumUS)
+{
+  digitalWrite(pinNumUS,LOW);                 // make sure pin is low before pulsing
+  pinMode(pinNumUS,OUTPUT);                   // set up pin to initiate pulse
+  delayMicroseconds(2);                       // for 2 microseconds 
+  digitalWrite(pinNumUS,HIGH);                // Start pulse
+  delayMicroseconds(5);                       // for 5 microseconds
+  digitalWrite(pinNumUS,LOW);                 // set pin back to low to ready for return pulse
+  pinMode(pinNumUS,INPUT);                    // change pin to Input mode for return pulse
+  pulseWidth = pulseIn(pinNumUS,HIGH,18500);  // wait for return pulse. Timeout after 18.5 milliseconds
+  cm = (pulseWidth*10)/58;                    // Convert to centimeters, use 58 for Mega
+  delayMicroseconds(200);                     //short delay before using another US
+  return cm;                                  // returns cm distance
 }
 
