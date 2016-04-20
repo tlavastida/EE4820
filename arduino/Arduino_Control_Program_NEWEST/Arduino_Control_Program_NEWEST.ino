@@ -165,13 +165,15 @@ void loop() {
                       //turn_L_P(num);
                       break;
                     case 'R':
-                      turn_R(780);    //  Don't mess this number up, fully charged turn
+                      turn_R(813);    //  Don't mess this number up, fully charged turn
                       //turn_R_P(887);      //Testing Proportional turning
-                      turn_R_P(num);
+                      //turn_R_P(num);
                       break;
                     default:
                       break;
                   }//switch end
+                  delay(1000);
+                  alignRobot();
                   delay(1000);
               }//for loop end
             taskComplete(0);
@@ -504,29 +506,29 @@ void alignRobot()
 
   checkSensors_IR_T();
 
-  for (int i = 0;i<10;i++)
+  for (int i = 0;i<4;i++)
       {
         checkSensors_IR_T();
         distanceAvg_L += Distance_IR_L_T;
         distanceAvg_R += Distance_IR_R_T;
       } 
     
-  distanceAvg_L = distanceAvg_L/10;
-  distanceAvg_R = distanceAvg_R/10;
+  distanceAvg_L = distanceAvg_L/4;
+  distanceAvg_R = distanceAvg_R/4;
   
   if (distanceAvg_L < upperThresh && distanceAvg_R < upperThresh)
   {
     while (abs(Distance_IR_L_T - Distance_IR_R_T) > tol)
     {
-      for (int i = 0;i<10;i++)
+      for (int i = 0;i<4;i++)
       {
         checkSensors_IR_T();
         distanceAvg_L += Distance_IR_L_T;
         distanceAvg_R += Distance_IR_R_T;
       } 
     
-      distanceAvg_L = distanceAvg_L/10;
-      distanceAvg_R = distanceAvg_R/10;
+      distanceAvg_L = distanceAvg_L/4;
+      distanceAvg_R = distanceAvg_R/4;
       
       bool thresh = abs(distanceAvg_L - distanceAvg_R) <= tol;
     
@@ -1100,7 +1102,9 @@ int moveDistanceWithAdjust(int distance_cms)
 	int diff_L = 0;
   int diff_R = 0; 
 	int avgWallDistance = 0;
-	
+  int maxThresh = 100; //used to see if diff is greater than a certain amount, indicating a gap, in mms
+
+  
 	//variables for angle calculation
 	int wallThreshold = 50; //mms
 	int angleTickCount = 0;
@@ -1160,7 +1164,7 @@ int moveDistanceWithAdjust(int distance_cms)
 		
 		delay(500);
 		
-		if( diff_L < 0 ) //use the left side
+		if( diff_L < 0 || abs(diff_R) > maxThresh ) //use the left side
 		{
 			//compute angle to adjust by
 			angleTickCount =  (64687 * abs( diff_L )) / (legDistance * 1000);
@@ -1172,12 +1176,12 @@ int moveDistanceWithAdjust(int distance_cms)
 			}
 			else if(rightUS[1] > rightUS[0])        //changed to right from left SMS
 			{
-				turn_R_P(angleTickCount);             //changed from L to R SMS
+				turn_L_P(angleTickCount);             //changed from L to R SMS
 			}
 			//if left[1] == left[0] do nothing
 			
 			//turn towards the center if necessary
-			if( leftUS[1] <= wallThreshold )
+			if( leftUS[1] <= wallThreshold && i+1 != num_moves ) //don't do it in the last iteration
 			{
 				delay(500);
 				//too close to the wall, turn towards center
@@ -1185,10 +1189,10 @@ int moveDistanceWithAdjust(int distance_cms)
 				turn_R_P(angleTickCount);
 			}
 			
-			approxDistance = sqrt( legDistance * legDistance - diff_L * diff_L );
+			approxDistance = sqrt( legDistance * legDistance - (diff_L * diff_L) / 100 );  //because legDistance is in cms and diff_L is in mms
 			
 		}
-		else if( diff_R < 0 ) //use the righ side
+		else if( diff_R < 0 || abs(diff_L) > maxThresh) //use the right side
 		{
 			//compute angle to adjust by
 			angleTickCount = (64687 * abs( diff_R )) / (legDistance * 1000);
@@ -1197,14 +1201,14 @@ int moveDistanceWithAdjust(int distance_cms)
 			{
 				turn_L_P(angleTickCount);
 			}
-			else if(leftUS[1] > leftUS[0])
+			else if(rightUS[1] > rightUS[0])
 			{
-				turn_L_P(angleTickCount);             //changed from R to L SMS
+				turn_R_P(angleTickCount);             //changed from R to L SMS
 			}
 			// if right[1] == right[0] do nothing
 			
 			//turn towards the center if necessary
-			if( rightUS[1] <= wallThreshold )
+			if( rightUS[1] <= wallThreshold && i+1 != num_moves ) ////don't do it in the last iteration
 			{
 				delay(500);
 				//too close to the wall, turn towards the center
@@ -1212,15 +1216,19 @@ int moveDistanceWithAdjust(int distance_cms)
 				turn_L_P(angleTickCount);
 			}
 			
-			approxDistance = sqrt( legDistance * legDistance - diff_R * diff_R );
+			approxDistance = sqrt( legDistance * legDistance - ( diff_R * diff_R ) / 100  );  //because legDistance is in cms and diff_R is in mms
 			
 		}
+    else
+    {
+      approxDistance = legDistance;
+    }
 		//else if diff_L == 0 and diff_R == 0 then  no adjustments
 		
 		totalDistance += approxDistance;
 		approxDistance = 0;
 		angleTickCount = 0;
-		
+		//Serial.println(totalDistance);
 		delay(500); //delay to lose momentum before next move
 	}
 	
