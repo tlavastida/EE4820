@@ -160,10 +160,14 @@ void loop() {
                   switch(mod)
                   {
                     case 'L':
-                      turn_L(724);    //  Don't mess this number up, fully charged turn
+                      turn_L(957);    //  Don't mess this number up, fully charged turn
+                      //turn_L_P(909);      //Testing Proportional turning
+                      //turn_L_P(num);
                       break;
                     case 'R':
-                      turn_R(724);    //  Don't mess this number up, fully charged turn
+                      turn_R(780);    //  Don't mess this number up, fully charged turn
+                      //turn_R_P(887);      //Testing Proportional turning
+                      turn_R_P(num);
                       break;
                     default:
                       break;
@@ -175,7 +179,7 @@ void loop() {
           break;
 		  //Travel - for testing, need to update to move grid squares
           case 'G':
-            distanceTravelled = moveGridUnits(num);
+            distanceTravelled = moveDistanceWithAdjust(num);
             taskComplete(distanceTravelled);
             distanceTravelled = 0;
           break;
@@ -197,6 +201,10 @@ void loop() {
             filtered_US();
             printUSsensorValues();
             taskComplete(0);
+          break;
+          case 'B':
+            //testTravel(127*CONV_FACTOR);
+            taskComplete(Count_Encoder_L/CONV_FACTOR);
           break;
           default:
             taskComplete(0);
@@ -344,15 +352,16 @@ void encoderInterruptRight()
 //Turn Right
 void turn_R(int tickGoal)
 {
+  int leftMotorAdj = -11;
   Count_Encoder_L = 0;delayMicroseconds(100);
   Count_Encoder_R = 0;delayMicroseconds(100);
   int speed = 130;
   while (Count_Encoder_L < tickGoal)
   {
-     mtr_ctrl.setM2Speed(speed);
+     mtr_ctrl.setM2Speed(speed+leftMotorAdj);
      mtr_ctrl.setM1Speed(-1*speed); 
   }
-  delay(100);
+  //delay(100);         //Don't know why there was a delay here
   mtr_ctrl.setM1Speed(STOP);
   mtr_ctrl.setM2Speed(STOP);
   delay(100);
@@ -361,15 +370,16 @@ void turn_R(int tickGoal)
 //Turn Left
 void turn_L(int tickGoal)
 {
+  int leftMotorAdj = -11;
   Count_Encoder_L = 0;delayMicroseconds(100);
   Count_Encoder_R = 0;delayMicroseconds(100);
   int speed = 130;
   while (Count_Encoder_R < tickGoal)
   {
-     mtr_ctrl.setM2Speed(-1*speed);
+     mtr_ctrl.setM2Speed(-1*(speed+leftMotorAdj));
      mtr_ctrl.setM1Speed(speed); 
   }
-  delay(100);
+  //delay(100);       //Don't know why there was a delay here
   mtr_ctrl.setM1Speed(STOP);
   mtr_ctrl.setM2Speed(STOP);
   delay(100);
@@ -446,16 +456,16 @@ void accelFromStop(int input , int code)
     for(int i = 1; i <= upper; ++i)
     {
       switch(code) {
-        case 0:
+        case FORWARD:
           mtr_ctrl.setSpeeds(i,i);
           break;
-        case 1:
+        case BACKWARD:
           mtr_ctrl.setSpeeds(-1*i,-1*i);
           break;
-        case 2:
+        case LEFT:
           mtr_ctrl.setSpeeds(i,-1*i);
           break;
-        case 3:
+        case RIGHT:
           mtr_ctrl.setSpeeds(-1*i,i);
       }
     }
@@ -463,16 +473,16 @@ void accelFromStop(int input , int code)
     for(int i = upper; i >= input; --i)
     {
        switch(code) {
-        case 0:
+        case FORWARD:
           mtr_ctrl.setSpeeds(i,i);
           break;
-        case 1:
+        case BACKWARD:
           mtr_ctrl.setSpeeds(-1*i,-1*i);
           break;
-        case 2:
+        case LEFT:
           mtr_ctrl.setSpeeds(i,-1*i);
           break;
-        case 3:
+        case RIGHT:
           mtr_ctrl.setSpeeds(-1*i,i);
       }
     }
@@ -606,8 +616,9 @@ void alignRobot2()
 //Turn Left using proportional control
 void turn_L_P(int leftTickCount)
 {
-  int SLOW = 65;
-  int Kp = 30;// 20;
+  int SLOW = 100;
+  int Kp = 2;// 30;
+  int accelSpeed = 0;
 
   //Set points
   int count_L = Count_Encoder_L - leftTickCount;
@@ -615,14 +626,14 @@ void turn_L_P(int leftTickCount)
 
   long startTime = millis();
 
-  int topSpeed = 90;     //150
+  int topSpeed = 130;     
 
-  int el = count_L - Count_Encoder_L; 
+  int el = count_L - Count_Encoder_L;     
   int er = count_R - Count_Encoder_R;
   int tol = 15;
   
   //compute error
-    el = count_L - Count_Encoder_L;
+    el = count_L - Count_Encoder_L;     
     er = count_R - Count_Encoder_R;
     
     int leftInput = el*Kp;
@@ -645,38 +656,38 @@ void turn_L_P(int leftTickCount)
     {
       rightInput = (rightInput >= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
     }
-    
-  accelFromStop( (abs(leftInput)+abs(rightInput))/2 ,2);
+
+  accelFromStop( (abs(leftInput)+abs(rightInput))/2 ,LEFT);
   
   while ((abs(el) >= tol) || (abs(er) >= tol))
   {
     //compute error
-    el = count_L - Count_Encoder_L;
-    er = count_R - Count_Encoder_R;
+    el = count_L - Count_Encoder_L;       
+    er = count_R - Count_Encoder_R;      
     
-    leftInput = el*Kp;
+    leftInput = el*Kp;                    
     rightInput = er*Kp;
 
     if(el >= 0)
     {
-      //leftInput = (leftInput <= SLOW) ? SLOW : (leftInput >= topSpeed) ? topSpeed : leftInput;
-      leftInput = (leftInput >= topSpeed) ? topSpeed : leftInput;
+      leftInput = (leftInput <= SLOW) ? SLOW : (leftInput >= topSpeed) ? topSpeed : leftInput;
+      //leftInput = (leftInput >= topSpeed) ? topSpeed : leftInput;   //original
     }
     else 
     {
-      //leftInput = (leftInput >= -1*SLOW) ? -1*SLOW :(leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
-      leftInput = (leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
+      leftInput = (leftInput >= -1*SLOW) ? -1*SLOW :(leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;
+      //leftInput = (leftInput <= -1*topSpeed) ? -1*topSpeed : leftInput;   //original
     }
 
     if(er >= 0)
     {
-      //rightInput = (rightInput <= SLOW) ? SLOW : (rightInput >= topSpeed) ? topSpeed : rightInput;
-      rightInput = (rightInput >= topSpeed) ? topSpeed : rightInput;
+      rightInput = (rightInput <= SLOW) ? SLOW : (rightInput >= topSpeed) ? topSpeed : rightInput;
+      //rightInput = (rightInput >= topSpeed) ? topSpeed : rightInput;    //original
     }
     else
     {
-      //rightInput = (rightInput <= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
-      rightInput = (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
+      rightInput = (rightInput <= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
+      //rightInput = (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;    //original
     }
     
     
@@ -696,23 +707,23 @@ void turn_L_P(int leftTickCount)
 //Turn Right using proportional control
 void turn_R_P(int rightTickCount)
 {
-  int SLOW = 60;
-  int Kp = 2; //1
+  int SLOW = 100;
+  int Kp = 2; //1         
  
   //Set points
   int count_L = Count_Encoder_L + rightTickCount;
   int count_R = Count_Encoder_R - rightTickCount;
 
   long startTime = millis();
-  int topSpeed = 140;     //160 orig
+  int topSpeed = 130;     //140 orig
 
   int el = count_L - Count_Encoder_L; 
-  int er = count_R - Count_Encoder_R;
+  int er = count_R - Count_Encoder_R;       
   int tol = 17; //10
   
   //compute error
     el = count_L - Count_Encoder_L;
-    er = count_R - Count_Encoder_R;
+    er = count_R - Count_Encoder_R;         
     
     int leftInput = el*Kp;
     int rightInput = er*Kp;
@@ -735,13 +746,13 @@ void turn_R_P(int rightTickCount)
       rightInput = (rightInput >= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
     }
     
-  accelFromStop( (abs(leftInput)+abs(rightInput))/2 ,3);
+  accelFromStop( (abs(leftInput)+abs(rightInput))/2 ,RIGHT);
   
   while ((abs(el) >= tol) || (abs(er) >= tol))
   {
     //compute error
     el = count_L - Count_Encoder_L;
-    er = count_R - Count_Encoder_R;
+    er = count_R - Count_Encoder_R;     
     
     leftInput = Kp*el;
     rightInput = Kp*er;
@@ -1087,7 +1098,7 @@ int moveDistanceWithAdjust(int distance_cms)
 	int leftUS[2] = {0,0};
 	int rightUS[2] = {0,0};
 	int diff_L = 0;
-    int diff_R = 0; 
+  int diff_R = 0; 
 	int avgWallDistance = 0;
 	
 	//variables for angle calculation
@@ -1159,9 +1170,9 @@ int moveDistanceWithAdjust(int distance_cms)
 			{
 				turn_R_P(angleTickCount);
 			}
-			else if(leftUS[1] > leftUS[0])
+			else if(rightUS[1] > rightUS[0])        //changed to right from left SMS
 			{
-				turn_L_P(angleTickCount);
+				turn_R_P(angleTickCount);             //changed from L to R SMS
 			}
 			//if left[1] == left[0] do nothing
 			
@@ -1188,12 +1199,12 @@ int moveDistanceWithAdjust(int distance_cms)
 			}
 			else if(leftUS[1] > leftUS[0])
 			{
-				turn_R_P(angleTickCount);
+				turn_L_P(angleTickCount);             //changed from R to L SMS
 			}
 			// if right[1] == right[0] do nothing
 			
 			//turn towards the center if necessary
-			if( rightUs[1] <= wallThreshold )
+			if( rightUS[1] <= wallThreshold )
 			{
 				delay(500);
 				//too close to the wall, turn towards the center
@@ -1215,5 +1226,24 @@ int moveDistanceWithAdjust(int distance_cms)
 	
 	return totalDistance;
 }
+
+//Test to figure out left motor adj
+//void testTravel(int ticks)
+//{
+//  int speed = 130;
+//  int leftMotorAdj = -11;
+//
+//  Count_Encoder_L = 0;
+//  Count_Encoder_R = 0;
+//  
+//  while (Count_Encoder_L < ticks)
+//  {
+//    mtr_ctrl.setM1Speed(speed);
+//    mtr_ctrl.setM2Speed(speed + leftMotorAdj);
+//  }
+//  
+//  mtr_ctrl.setM1Speed(STOP);
+//  mtr_ctrl.setM2Speed(STOP);
+//}
 
 
