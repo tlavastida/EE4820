@@ -167,7 +167,7 @@ void loop() {
                       //turn_L_P(num);
                       break;
                     case 'R':
-                      turn_R(761);    //  Don't mess this number up, fully charged turn (761)
+                      turn_R(850);    //  Don't mess this number up, fully charged turn (761)
                       //turn_R_P(887);      //Testing Proportional turning
                       //turn_R_P(num);
                       break;
@@ -567,7 +567,7 @@ void alignRobot()
 //Align the robot to a wall. Must be within a certain distance (upperThresh)
 void alignRobot2()
 {
-  int tol = 1;          //mm
+  int tol = 10;          //mm
   int goTicks = 0;
   int distanceAvg_L = 0;
   int distanceAvg_R = 0;
@@ -575,29 +575,29 @@ void alignRobot2()
 
   checkSensors_IR_B();
 
-  for (int i = 0;i<10;i++)
+  for (int i = 0;i<4;i++)
       {
         checkSensors_IR_B();
         distanceAvg_L += Distance_IR_L_B;
         distanceAvg_R += Distance_IR_R_B;
       } 
     
-  distanceAvg_L = distanceAvg_L/10;
-  distanceAvg_R = distanceAvg_R/10;
+  distanceAvg_L = distanceAvg_L>>2;
+  distanceAvg_R = distanceAvg_R>>2;
   
   if (distanceAvg_L < upperThresh && distanceAvg_R < upperThresh)
   {
     while (abs(Distance_IR_L_B - Distance_IR_R_B) > tol)
     {
-      for (int i = 0;i<10;i++)
+      for (int i = 0;i<4;i++)
       {
         checkSensors_IR_B();
         distanceAvg_L += Distance_IR_L_B;
         distanceAvg_R += Distance_IR_R_B;
       } 
     
-      distanceAvg_L = distanceAvg_L/10;
-      distanceAvg_R = distanceAvg_R/10;
+      distanceAvg_L = distanceAvg_L>>2;
+      distanceAvg_R = distanceAvg_R>>2;
       
       bool thresh = abs(distanceAvg_L - distanceAvg_R) <= tol;
     
@@ -625,9 +625,9 @@ void alignRobot2()
 }
 
 //Turn Left using proportional control
-void turn_L_P(int leftTickCount)
+void turn_L_P(long leftTickCount)
 {
-  int SLOW = 90;
+  int SLOW = 70;
   int Kp = 2;// 30;
   int accelSpeed = 0;
 
@@ -716,9 +716,9 @@ void turn_L_P(int leftTickCount)
 }
 
 //Turn Right using proportional control
-void turn_R_P(int rightTickCount)
+void turn_R_P(long rightTickCount)
 {
-  int SLOW = 90;
+  int SLOW = 70;
   int Kp = 2; //1         
  
   //Set points
@@ -806,35 +806,37 @@ void travelToTarget_IR()
     int acquireSlow = 70;
     int distanceAvg_L = 0;
     int distanceAvg_R = 0;
-    int thresh = 68;
+    int thresh = 66; 
+    int tol = 1;       
 
-    for (int i = 0;i<5;i++)
+    for (int i = 0;i<2;i++)
       {
         checkSensors_IR_B();
         distanceAvg_L += Distance_IR_L_B;
         distanceAvg_R += Distance_IR_R_B;
       } 
     
-      distanceAvg_L = distanceAvg_L/5;
-      distanceAvg_R = distanceAvg_R/5;
+      distanceAvg_L = distanceAvg_L>>1;
+      distanceAvg_R = distanceAvg_R>>1;
     
     accelFromStop(acquireSlow,BACKWARD);    //go in reverse slowly
-    objectReached = (abs(distanceAvg_L-thresh) <= PICKUP_TOLERANCE) || (abs(distanceAvg_R-thresh) <= PICKUP_TOLERANCE);
+    objectReached = (abs(distanceAvg_L-thresh) <= tol) || (abs(distanceAvg_R-thresh) <= tol) ;
     while (objectReached == false)
     {
       distanceAvg_L = 0;
       distanceAvg_R = 0;
-      for (int i = 0;i<5;i++)
+      
+      for (int i = 0;i<2;i++)
       {
         checkSensors_IR_B();
         distanceAvg_L += Distance_IR_L_B;
         distanceAvg_R += Distance_IR_R_B;
       } 
     
-      distanceAvg_L = distanceAvg_L/5;
-      distanceAvg_R = distanceAvg_R/5;
+      distanceAvg_L = distanceAvg_L>>1;
+      distanceAvg_R = distanceAvg_R>>1;
       
-      if ((abs(distanceAvg_L-thresh) <= PICKUP_TOLERANCE) || (abs(distanceAvg_R-thresh) <= PICKUP_TOLERANCE)) //at target
+      if ((abs(distanceAvg_L-thresh) <= tol) || (abs(distanceAvg_R-thresh) <= tol)) //at target
       {
         mtr_ctrl.setM1Speed(STOP);
         mtr_ctrl.setM2Speed(STOP);
@@ -854,55 +856,70 @@ void travelToTarget_IR()
 //Rotate until aligned with target
 void align()
 {
-  int acquireSlow = 70;
+  int acquireSlow = 100;
   bool targetAcquired = false;
-  int tol = 5;
+  int tol = 15;
   int currentTime = millis();
   int distanceAvg_L = 0;
   int distanceAvg_R = 0;
+  long smallAdj = 60;
+  long ticks;
   
   while (targetAcquired == false)
   {
     distanceAvg_L = 0;
     distanceAvg_R = 0;
-    for (int i = 0;i<4;i++)
+    for (int i = 0;i<1;i++)
       {
         checkSensors_IR_B();
         distanceAvg_L += Distance_IR_L_B;
         distanceAvg_R += Distance_IR_R_B;
       } 
     
-      distanceAvg_L = distanceAvg_L>>2;
-      distanceAvg_R = distanceAvg_R>>2;
+      distanceAvg_L = distanceAvg_L;
+      distanceAvg_R = distanceAvg_R;
     
-    if ((abs(PICKUP_VICTIM_THRESHOLD-distanceAvg_L) <= tol)&& (abs(PICKUP_VICTIM_THRESHOLD-distanceAvg_R)<= tol)) 
+    //if ((abs(PICKUP_VICTIM_THRESHOLD-distanceAvg_L) <= tol)&& (abs(PICKUP_VICTIM_THRESHOLD-distanceAvg_R)<= tol))  
+    if (abs(distanceAvg_L-distanceAvg_R) <= tol)
     {
       //pickup target
       mtr_ctrl.setM1Speed(STOP);
       mtr_ctrl.setM2Speed(STOP);
+      if ((distanceAvg_L < 68) && (distanceAvg_R < 68))
+      {
+        ticks = 26;
+        travelDistance_Enc(ticks);
+      }
       targetAcquired = true;
     }
-    else if((distanceAvg_L < distanceAvg_R) && (abs(distanceAvg_L-distanceAvg_R) >= tol))
+    else if((distanceAvg_L < distanceAvg_R) && (abs(distanceAvg_L-distanceAvg_R) >= tol) && (distanceAvg_L < 110)&& (distanceAvg_R < 110))
     {
       //turn right slightly
-      accelFromStop(acquireSlow,RIGHT); //get started backwards
-      mtr_ctrl.setM1Speed(-1*acquireSlow);
-      mtr_ctrl.setM2Speed(acquireSlow+LEFT_MOTOR_ADJ);
+      turn_R_P(smallAdj);
+      delay(500);
+      //accelFromStop(acquireSlow,RIGHT); //get started backwards
+      //mtr_ctrl.setM1Speed(-1*acquireSlow);
+      //mtr_ctrl.setM2Speed(acquireSlow+LEFT_MOTOR_ADJ);
     }
-    else if ((distanceAvg_L > distanceAvg_R) && (abs(distanceAvg_L-distanceAvg_R) >= tol))
+    else if ((distanceAvg_L > distanceAvg_R) && (abs(distanceAvg_L-distanceAvg_R) >= tol) && (distanceAvg_L < 110)&& (distanceAvg_R < 110))
     {
       //turn LEFT slightly
-      accelFromStop(acquireSlow,LEFT); //get started backwards
-      mtr_ctrl.setM1Speed(acquireSlow);
-      mtr_ctrl.setM2Speed(-1*(acquireSlow+LEFT_MOTOR_ADJ));
+      turn_L_P(smallAdj);
+      delay(500);
+      //accelFromStop(acquireSlow,LEFT); //get started backwards
+      //mtr_ctrl.setM1Speed(acquireSlow);
+      //mtr_ctrl.setM2Speed(-1*(acquireSlow+LEFT_MOTOR_ADJ));
     }
     
-    if ((millis()-currentTime) >= 5000)
+    if ((millis()-currentTime) >= 10000)
     {
       break;
     } 
     
   }
+      mtr_ctrl.setM1Speed(STOP);
+      mtr_ctrl.setM2Speed(STOP);
+      manipulateGripper('O');
       delay(1000);
       manipulateGripper('D');
       delay(1000);
@@ -910,8 +927,7 @@ void align()
       delay(1000);
       manipulateGripper('U');
       delay(1000);
-      mtr_ctrl.setM1Speed(STOP);
-      mtr_ctrl.setM2Speed(STOP);
+     
 }
 
 int moveGridUnits(int numGrids)
@@ -1049,17 +1065,42 @@ void filtered_US()
 {
   int distanceAvg_L = 0;
   int distanceAvg_R = 0;
+  int distanceUS_L[4] = {0,0,0,0};
+  int distanceUS_R[4] = {0,0,0,0};
+  int i = 0;
+   
+  while (i < 4)
+  {
+    checkSensors_US_mm();
+    if ((Distance_US_L > 0) && (Distance_US_R > 0))
+    {
+      distanceUS_L[i] = Distance_US_L;
+      distanceUS_R[i] = Distance_US_R;
+      i+=1;
+    }
+    else
+    {
+      i=i-1;
+    }
+  }//end while
+
+  for (i = 0;i<4;i++)
+  {
+    distanceAvg_L += distanceUS_L[i];
+    distanceAvg_R += distanceUS_R[i];
+  }
   
-  for (int i = 0;i<4;i++)
-      {
-        checkSensors_US_mm();
-        distanceAvg_L += Distance_US_L;
-        distanceAvg_R += Distance_US_R;
-        
-      } 
+//  for (int i = 0;i<4;i++)
+//     {
+//        checkSensors_US_mm();
+//        distanceAvg_L += Distance_US_L;
+//        distanceAvg_R += Distance_US_R;
+//        
+//     } 
     
   Distance_US_L = distanceAvg_L>>2;
   Distance_US_R = distanceAvg_R>>2;
+  printUSsensorValues();
 }
 
 //Used exclusively by the go grid squares function
@@ -1099,40 +1140,40 @@ int moveDistanceWithAdjust(int distance_cms)
 {
 	//variable declarations for movement
 	int num_moves = 1;
-	int moveDistance = 0; //cm
-	int totalDistance = 0; //cm 
-	int legDistance = 0;
-	int remainderDistance = 0;
-	int approxDistance = 0; //cm
+	long moveDistance = 0; //cm
+	long totalDistance = 0; //cm 
+	long legDistance = 0;
+	long remainderDistance = 0;
+	long approxDistance = 0; //cm
 	
 	
 	//variable declarations for sensors
-	int leftUS[2] = {0,0};
-	int rightUS[2] = {0,0};
-	int diff_L = 0;
-  int diff_R = 0; 
-	int avgWallDistance = 0;
-  int maxThresh = 100; //used to see if diff is greater than a certain amount, indicating a gap, in mms
+	long leftUS[2] = {0,0};
+	long rightUS[2] = {0,0};
+	long diff_L = 0;
+  long diff_R = 0; 
+	long avgWallDistance = 0;
+  long maxThresh = 100; //used to see if diff is greater than a certain amount, indicating a gap, in mms
   
   
 	//variables for angle calculation
 	int wallThreshold = 50; //mms       
-	int angleTickCount = 0;
+	long angleTickCount = 0;
 	
 	//compute number of moves to make first
-	if( distance_cms > 0 && distance_cms <= 30 )
+	if( distance_cms > 0 && distance_cms <= 40 )
 	{
 		num_moves = 1;
 	}
-	else if( distance_cms > 30 && distance_cms <= 60 )
+	else if( distance_cms > 40 && distance_cms <= 80 )
 	{
 		num_moves = 2;
 	}
-	else if( distance_cms > 60 && distance_cms <= 120 )
+	else if( distance_cms > 80 && distance_cms <= 120 )     //changing 120 to 90 SMS
 	{	
 		num_moves = 3;
 	}
-	else if( distance_cms > 120 )
+	else if( distance_cms > 120 )                          //changing 120 to 90 SMS
 	{
 		num_moves = 4;
 	}
@@ -1173,22 +1214,22 @@ int moveDistanceWithAdjust(int distance_cms)
 		
 		delay(750);
 		
-		if( diff_L < 0 || abs(diff_R) > maxThresh && abs(diff_L) > 15 ) //use the left side
+		if( diff_L < 0 || abs(diff_R) > maxThresh && abs(diff_L) > 150 ) //use the left side //changed 15 to 150
 		{
 			//compute angle to adjust by
-			angleTickCount =  (64687 * abs( diff_L )) / (legDistance * 1000);
+			angleTickCount =  (64687 * abs( diff_L )) / (legDistance * 1000);            
       //angleTickCount = (abs(diff_L)>100) ? 0:angleTickCount; //testing this
 			Serial.print("Using diff_L if ");
       Serial.print(diff_L);
       Serial.print(" ");
       Serial.println(angleTickCount);
 			//decide which direction to turn
-			if( leftUS[1] < leftUS[0] )
+			if( leftUS[1] < leftUS[0] && angleTickCount <= 210 )
 			{
         Serial.println("Using diff_L and turning right");
 				turn_R_P(angleTickCount);
 			}
-			else if(leftUS[1] > leftUS[0])        //changed to right from left SMS
+			else if(leftUS[1] > leftUS[0] && angleTickCount <= 210 )        //changed to right from left SMS
 			{
         Serial.println("Using diff_L and turning left");
 				turn_L_P(angleTickCount);             //changed from L to R SMS
@@ -1199,21 +1240,21 @@ int moveDistanceWithAdjust(int distance_cms)
 			approxDistance = sqrt( legDistance * legDistance - (diff_L * diff_L) / 100 );  //because legDistance is in cms and diff_L is in mms
 			
 		}
-		else if( diff_R < 0 || abs(diff_L) > maxThresh) //use the right side
+		else if( diff_R < 0 || abs(diff_L) > maxThresh && abs(diff_R) > 150 ) //use the right side    //added in abs(diff_R)>150
 		{
 			//compute angle to adjust by
-			angleTickCount = (64687 * abs( diff_R )) / (legDistance * 1000);
+			angleTickCount = (64687 * abs( diff_R )) / (legDistance * 1000);       
       //angleTickCount = (abs(diff_R)>100) ? 0:angleTickCount; //testing this
 			Serial.print("Using diff_R if ");
       Serial.print(diff_R);
       Serial.print(" ");
       Serial.println(angleTickCount);
-			if( rightUS[1] < rightUS[0] )
+			if( rightUS[1] < rightUS[0] && angleTickCount <= 210  )
 			{
         Serial.println("Using diff_R and turning left");
 				turn_L_P(angleTickCount);
 			}
-			else if(rightUS[1] > rightUS[0])
+			else if(rightUS[1] > rightUS[0] && angleTickCount <= 210 )
 			{
         Serial.println("Using diff_R and turning right");
 				turn_R_P(angleTickCount);             //changed from R to L SMS
@@ -1254,19 +1295,21 @@ int moveDistanceWithAdjust(int distance_cms)
     {
       delay(750);
       //too close to the wall, turn towards center
-      angleTickCount = (64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 1000);
+      Serial.println(moveDistance);
+      angleTickCount = abs((64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 10000));        //added extra zero because mismatch,changed to abs value because negative values were being returned
       Serial.println("Turning right towards the center ");
       Serial.println(angleTickCount);
-      turn_R_P(angleTickCount);
+      turn_R_P(angleTickCount);                      
     }
     else if( rightUS[1] <= wallThreshold && i+1 != num_moves ) ////don't do it in the last iteration
     {
       delay(750);
       //too close to the wall, turn towards the center
-      angleTickCount = (64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 1000);
+       Serial.println(moveDistance);
+      angleTickCount = abs((64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 10000));       //added extra zero because mismatch, changed to abs value because negative values were being returned
       Serial.print("Turning left towards the center ");
       Serial.println(angleTickCount);
-      turn_L_P(angleTickCount);
+      turn_L_P(angleTickCount);                    
     }
 
 		
