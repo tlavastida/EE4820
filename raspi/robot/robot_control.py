@@ -36,7 +36,7 @@ class Robot:
         self.direction = 'E'
 
         ### Camera Stuff ###
-        self.cam = picamera.PiCamera()
+        #self.cam = picamera.PiCamera()
         
 
     #abstracting the pattern from the other functions I wrote:
@@ -78,10 +78,7 @@ class Robot:
         elif self.direction == 'S':
             self.direction = 'E'
 
-        else:
-            print 'Not a valid direction'
-
-        return msg #PLACEHOLDER
+        return msg
 
     #tells arduino to turn right
     def turn_right(self,num_turns):
@@ -102,10 +99,7 @@ class Robot:
         elif self.direction == 'S':
             self.direction = 'W'
 
-        else:
-            print 'Not a valid direction'
-
-        return msg #PLACEHOLDER
+        return msg
 
     #tells arduino to make a 180 degree turn
     def about_face(self):
@@ -147,7 +141,7 @@ class Robot:
 
 
     def lower_gripper(self):
-        self.ser.send('M' str(0) + 'D')
+        self.ser.send('M'+ str(0) + 'D')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
@@ -155,7 +149,7 @@ class Robot:
         return msg
 
     def raise_gripper(self):
-        self.ser.send('M' + str(0) 'U')
+        self.ser.send('M' + str(0) + 'U')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
@@ -287,8 +281,13 @@ def test_run():
         time.sleep(1.0)
         current = i
 
+    #(success,color) = sara.detectVictim()
     #reached target location
     sara.pickup()
+
+    #if color == 'RED':
+    #    sara.open_grip()
+
 
 
     print('Yay .... ?')
@@ -361,7 +360,7 @@ def interactive_main_loop():
         
 if __name__ == '__main__':
     #interactive_main_loop()
-    #test_run()
+    test_run()
     #forward_test()
-    print('Script is running ... ')    
+    #print('Script is running ... ')    
     
