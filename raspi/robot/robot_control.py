@@ -8,8 +8,9 @@
 
 import robot_serial
 #import numpy
-import Pathfinding
 import color_filter
+import WayPoint
+
 import picamera
 import picamera.array
 import cv2
@@ -21,7 +22,7 @@ class Robot:
 
         ### Serial Stuff ###
         self.portname = '/dev/ttyACM0'
-        self.baud = 250000
+        self.baud = 115200  # 250000
         self.timeout = 2
         self.ser = robot_serial.RobotSerial(self.portname,self.baud,self.timeout)
         ####################
@@ -32,26 +33,11 @@ class Robot:
         ####################
 
         ### State variables ###
-        self.grid_x = 0
-        self.grid_y = 0
-        #insert variable/s for encoder measurements maybe?
-        self.dx = 1
-        self.dy = 0
+        self.direction = 'E'
 
         ### Camera Stuff ###
         self.cam = picamera.PiCamera()
         
-    def print_state(self):
-        print('rescued victims: ' + str(self.found_victims))
-        print('position: (' + str(self.grid_x) + ',' + str(self.grid_y))
-        print('direction: (' + str(self.dx) + ',' + str(self.dy))
-        
-        
-    #updates grid positions in the map using an encoder reading
-    #def update_grid_position(self,encoder1,encoder2):
-    #    avg = (encoder1+encoder2)//2 #integer division for now, maybe try floating point plus round later
-    #    self.grid_x += self.dx*avg   #FIX LATER - NEED CORRECT CONVERSION FACTOR TO GRID SPACE
-    #    self.grid_y += self.dy*avg   #FIX LATER - NEED CORRECT CONVERSION FACTOR TO GRID SPACE
 
     #abstracting the pattern from the other functions I wrote:
     def exec_cmd(self,cmd_str):
@@ -64,21 +50,37 @@ class Robot:
 
     #functions I already wrote, all had a similar pattern
     def forward(self,distance):
-        print('G'+str(distance))
+        print('G'+str(distance)+'Z')
         self.ser.send('G'+str(distance))
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
         return msg #PLACEHOLDER
         
+
     #tells arduino to turn left
     def turn_left(self,num_turns):
         self.ser.send('T'+str(num_turns)+'L')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
-        self.dx = -1*self.dy
-        self.dy = self.dx
+        
+        #update direction
+        if self.direction == 'N':
+            self.direction = 'W'
+
+        elif self.direction == 'W':
+            self.direction = 'S'
+
+        elif self.direction == 'E':
+            self.direction = 'N'
+
+        elif self.direction == 'S':
+            self.direction = 'E'
+
+        else:
+            print 'Not a valid direction'
+
         return msg #PLACEHOLDER
 
     #tells arduino to turn right
@@ -87,13 +89,45 @@ class Robot:
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
-        self.dx = self.dy
-        self.dy = -1*self.dx
+
+        if self.direction == 'N':
+            self.direction = 'E'
+
+        elif self.direction == 'W':
+            self.direction = 'N'
+
+        elif self.direction == 'E':
+            self.direction = 'S'
+
+        elif self.direction == 'S':
+            self.direction = 'W'
+
+        else:
+            print 'Not a valid direction'
+
         return msg #PLACEHOLDER
+
+    #tells arduino to make a 180 degree turn
+    def about_face(self):
+        self.ser.send('A0Z')
+        while self.ser.available() <= 0:
+            pass
+        msg = self.ser.recv()
+
+        if self.direction == 'N':
+            self.direction = 'S'
+        elif self.direction == 'S':
+            self.direction = 'N'
+        elif self.direction == 'W':
+            self.direction = 'E'
+        elif self.direction == 'E':
+            self.direction = 'W'
+
+        return msg
 
     #tells arduino to acquire a target victim and pickup
     def pickup(self):
-        self.ser.send('P')
+        self.ser.send('P0Z')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
@@ -102,8 +136,18 @@ class Robot:
 
         return msg #PLACEHOLDER
 
+    def dropoff(self):
+        self.ser.send('D0Z')
+        while self.ser.available() <= 0:
+            pass
+        msg = self.ser.recv()
+
+        #update state?
+        return msg #PLACEHOLDER        
+
+
     def lower_gripper(self):
-        self.ser.send('MD')
+        self.ser.send('M' str(0) + 'D')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
@@ -111,7 +155,7 @@ class Robot:
         return msg
 
     def raise_gripper(self):
-        self.ser.send('MU')
+        self.ser.send('M' + str(0) 'U')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
@@ -119,31 +163,19 @@ class Robot:
         return msg
 
     def open_grip(self):
-        self.ser.send('MO')
+        self.ser.send('M'+ str(0) +'O')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
         return msg
     
     def close_grip(self):
-        self.ser.send('MC')
+        self.ser.send('M' + str(0) + 'C')
         while self.ser.available() <= 0:
             pass
         msg = self.ser.recv()
 
         return msg
-
-    def direction(self):
-        if self.dx == 1 and self.dy == 0:
-            return 'East'
-        elif self.dx == -1 and self.dy == 0:
-            return 'West'
-        elif self.dx == 0 and self.dy == 1:
-            return 'North'
-        elif self.dx == 0 and self.dy == -1:
-            return 'South'
-        else:
-            return None
 
     def detectVictim(self):
         with picamera.array.PiRGBArray(self.cam) as stream:
@@ -187,94 +219,87 @@ def camera_test():
 
 
 def main_loop():
-
     sara = Robot()
-    grid = Pathfinding.gridCourse(None)
-    pathfind = Pathfinding.PathFinder(grid.gridmap)
-
-    targetList = [(19,21), (16,2), (13,2), (5,22), (1,20), (3,1)]
-    victimNodes = { targetList[0]:(19,22), targetList[1]:(16,1), targetList[2]:(13,1), targetList[3]:(4,22), targetList[4]:(1,19), targetList[5]:(4,1) }
+    graph = WayPoint.WayPoint()
 
 
-    startpos = (22,1)
-    sara.grid_x = 22
-    sara.grid_y = 1
 
-    for target in targetList:    #maybe use pop
-        pathfind.findCorners( (sara.grid_x,sara.grid_y), target)
-        actions = pathfind.actionList( sara.direction() )
 
-        #carry out all the moves
-        for move in actions:
-            words = move.split(':')
-
-            if words[0] == 'F':
-                pass #move forward
-
-            elif words[0] == 'T':
-                pass #turns ...
-                
-            else:
-                pass #default case
-
-            time.sleep(1.5)
-
-                
-        #turn around to check for victim
-        sara.about_face()
-        time.sleep(1.5)
-
-        #check for victim
-        if sara.detectVictim():
-            sara.pickup()
-            #find return path
-            sara.grid_x = target[0] - sara.dx
-            sara.grid_y = target[1] - sara.dy
 
 
     
 def test_run():
+
     sara = Robot()
-    time.sleep(2)
-    #grid = Pathfinding.gridCourse(None)
-    pathfind = Pathfinding.PathFinder()  #grid.gridmap)
+    graph = WayPoint.WayPoint()
 
-    sara.grid_x = 22
-    sara.grid_y = 1
 
-    target = (19,22)
+    start = 0
+    target1 = 4
+    #target2 = 23
 
-    pathfind.findCorners( (sara.grid_x,sara.grid_y), target )
-    actions = pathfind.actionList( sara.direction() )
+    path = graph.search(start,target1)
 
-    print('Computed path, starting route...')
+    current = start
+    for i in path[1:]:
+        (distance,direction) = graph.getData(current,i)
 
-    
-    for move in actions:
-        print(move)
-        words = move.split(':')
-        if words[0] == 'F':
-            grid_dist = int(words[1])
-            cms = (1016*grid_dist)//1000   #this bitch right here
-            print(cms)
-            msg = sara.forward(cms)
-        elif words[0] == 'T' and words[1] == 'R':
-            msg = sara.turn_right(1)
-        elif words[0] == 'T' and words[1] == 'L':
-            msg = sara.turn_left(1)
+        if direction == sara.direction:
+            sara.forward(distance)
         else:
-            msg = 'Not a valid move?'
+            if direction == 'N':
+                if sara.direction == 'S':
+                    sara.about_face()
+                elif sara.direction == 'E':
+                    sara.turn_left(1)
+                elif sara.direction == 'W':
+                    sara.turn_right(1)
 
-        print(msg)
-        time.sleep(1.5)
-        
 
-    print('YAY..... maybe?')
+            elif direction == 'W':
+                if sara.direction == 'N':
+                    sara.turn_left(1)
+                elif sara.direction == 'S':
+                    sara.turn_right(1)
+                elif sara.direction == 'E':
+                    sara.about_face()
+
+
+            elif direction == 'E':
+                if sara.direction == 'W':
+                    sara.about_face()
+                elif sara.direction == 'N':
+                    sara.turn_right(1)
+                elif sara.direction == 'S':
+                    sara.turn_left(1)
+
+            elif direction == 'S':
+                if sara.direction == 'N':
+                    sara.about_face()
+                elif sara.direction == 'W':
+                    sara.turn_left(1)
+                elif sara.direction == 'E':
+                    sara.turn_right(1)
+
+            #now direction == sara.direction
+            sara.forward(distance)
+
+        time.sleep(1.0)
+        current = i
+
+    #reached target location
+    sara.pickup()
+
+
+    print('Yay .... ?')
+
+
+
+
     
     
 def interactive_main_loop():
     
-    #my most favorite line of code ever -- Thomas
     sara = Robot()
 
     #cmd_str = ''
