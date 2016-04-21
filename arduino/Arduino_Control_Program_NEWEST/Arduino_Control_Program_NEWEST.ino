@@ -92,6 +92,8 @@ int distanceTravelled = 0;
 char cmd;
 long num = 0;
 char mod;
+const long TURN_LEFT_TICK = 950;    //902
+const long TURN_RIGHT_TICK = 761;
 
 volatile bool inDanger = false;
 
@@ -102,7 +104,7 @@ void setup() {
   Serial.begin(115200);
   delay(1000); 
   microServo.attach(MICRO_SERVOPIN);
-  microServo.write(GRIP_OPEN);        // sets the gripper servo position to closed 
+  microServo.write(GRIP_GRAB);        // sets the gripper servo position to closed 
   largeServo.attach(LARGE_SERVOPIN);
   largeServo.write(WRIST_PICKUP);     // sets the wrist servo position to travel position
   pinMode(DIG_PIN_CLK_R,INPUT);     //changing DIG_PIN_CLK_1 to say right
@@ -135,19 +137,18 @@ void loop() {
 			//Check bottom IR sensors - for testing purposes only
           case 'I':
             checkSensors_IR_B();
-            printIRsensorValues_B();
+            
             taskComplete(0);
           break;
 		  //Check top IR sensors - for testing purposes only
           case 'J':
             checkSensors_IR_T();
-            printIRsensorValues_T();
+            
             taskComplete(0);
           break;
 		  //check US sensors - for testing purposes only
           case 'U':
             checkSensors_US();
-            printUSsensorValues();
             taskComplete(0);
           break;
 		  //Manipulate gripper arm
@@ -162,12 +163,12 @@ void loop() {
                   switch(mod)
                   {
                     case 'L':
-                      turn_L(902);    //  Don't mess this number up, fully charged turn (902)
+                      turn_L(TURN_LEFT_TICK);    //  Don't mess this number up, fully charged turn (902)
                       //turn_L_P(909);      //Testing Proportional turning
                       //turn_L_P(num);
                       break;
                     case 'R':
-                      turn_R(850);    //  Don't mess this number up, fully charged turn (761)
+                      turn_R(TURN_RIGHT_TICK);    //  Don't mess this number up, fully charged turn (761)
                       //turn_R_P(887);      //Testing Proportional turning
                       //turn_R_P(num);
                       break;
@@ -203,7 +204,6 @@ void loop() {
           break;
           case 'F':
             filtered_US();
-            printUSsensorValues();
             taskComplete(0);
           break;
           case 'B':
@@ -212,6 +212,10 @@ void loop() {
           break;
           case 'D':
             dropVictim();
+            taskComplete(0);
+          break;
+          case 'A':
+            aboutFace();
             taskComplete(0);
           break;
           default:
@@ -231,40 +235,12 @@ void loop() {
 //For handshaking with the pi, mostly useful for travel distance
 void taskComplete(int distance)
 {
-  Serial.flush();
   sprintf(Buffer,"DistTravelled: %d\n",distance);
   Serial.print(Buffer);
-  Serial.flush();
 }
 
-//For debugging, remove later
-void printUSsensorValues()
-{
-  Serial.print(Distance_US_L);
-  Serial.print(" ");
-  Serial.print(Distance_US_R);
-  Serial.print(" ");
-  Serial.print(Distance_US_F);
-  Serial.println();
-}
 
-//For debugging, remove later
-void printIRsensorValues_B()
-{
-  Serial.print(Distance_IR_L_B);
-  Serial.print(" ");
-  Serial.print(Distance_IR_R_B);
-  Serial.println();
-}
 
-//For debugging, remove later
-void printIRsensorValues_T()
-{
-  Serial.print(Distance_IR_L_T);
-  Serial.print(" ");
-  Serial.print(Distance_IR_R_T);
-  Serial.println();
-}
 
 //Use this to measure the bottom IR sensor distance
 void checkSensors_IR_B()
@@ -428,13 +404,13 @@ int travelDistance_Enc(int numTicks)
       else
       {
         dangerCounter += 1;
-        Serial.println("Add to danger Counter");
+        
         if(dangerCounter >= dangerCountThresh)
         {
           leftSpeed = STOP;
           followerSpeed = STOP;
           inDanger = true;
-          Serial.println("Danger, Danger");
+          
           //maybe break?
           break;
         } 
@@ -561,7 +537,7 @@ void alignRobot()
     }//end while
   }//end if
   checkSensors_IR_T(); 
-  printIRsensorValues_T();
+  
 }
 
 //Align the robot to a wall. Must be within a certain distance (upperThresh)
@@ -621,7 +597,7 @@ void alignRobot2()
     }//end while
   }//end if
   checkSensors_IR_B(); 
-  printIRsensorValues_B();
+  
 }
 
 //Turn Left using proportional control
@@ -1100,7 +1076,6 @@ void filtered_US()
     
   Distance_US_L = distanceAvg_L>>2;
   Distance_US_R = distanceAvg_R>>2;
-  printUSsensorValues();
 }
 
 //Used exclusively by the go grid squares function
@@ -1219,19 +1194,16 @@ int moveDistanceWithAdjust(int distance_cms)
 			//compute angle to adjust by
 			angleTickCount =  (64687 * abs( diff_L )) / (legDistance * 1000);            
       //angleTickCount = (abs(diff_L)>100) ? 0:angleTickCount; //testing this
-			Serial.print("Using diff_L if ");
-      Serial.print(diff_L);
-      Serial.print(" ");
-      Serial.println(angleTickCount);
+
 			//decide which direction to turn
 			if( leftUS[1] < leftUS[0] && angleTickCount <= 210 )
 			{
-        Serial.println("Using diff_L and turning right");
+        
 				turn_R_P(angleTickCount);
 			}
 			else if(leftUS[1] > leftUS[0] && angleTickCount <= 210 )        //changed to right from left SMS
 			{
-        Serial.println("Using diff_L and turning left");
+        
 				turn_L_P(angleTickCount);             //changed from L to R SMS
 			}
 			//if left[1] == left[0] do nothing
@@ -1245,18 +1217,15 @@ int moveDistanceWithAdjust(int distance_cms)
 			//compute angle to adjust by
 			angleTickCount = (64687 * abs( diff_R )) / (legDistance * 1000);       
       //angleTickCount = (abs(diff_R)>100) ? 0:angleTickCount; //testing this
-			Serial.print("Using diff_R if ");
-      Serial.print(diff_R);
-      Serial.print(" ");
-      Serial.println(angleTickCount);
+
 			if( rightUS[1] < rightUS[0] && angleTickCount <= 210  )
 			{
-        Serial.println("Using diff_R and turning left");
+       
 				turn_L_P(angleTickCount);
 			}
 			else if(rightUS[1] > rightUS[0] && angleTickCount <= 210 )
 			{
-        Serial.println("Using diff_R and turning right");
+        
 				turn_R_P(angleTickCount);             //changed from R to L SMS
 			}
 			// if right[1] == right[0] do nothing
@@ -1269,14 +1238,14 @@ int moveDistanceWithAdjust(int distance_cms)
 		}
     else
     {
-      Serial.println("Make no adj, straight");
+    
       approxDistance = legDistance;
     }
 		//else if diff_L == 0 and diff_R == 0 then  no adjustments
 
     if( leftUS[1] > 140 || rightUS[1] > 140 )
     {
-      Serial.println("Under the threshold");
+      
       avgWallDistance = 70;
     }
     else 
@@ -1295,20 +1264,18 @@ int moveDistanceWithAdjust(int distance_cms)
     {
       delay(750);
       //too close to the wall, turn towards center
-      Serial.println(moveDistance);
+      
       angleTickCount = abs((64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 10000));        //added extra zero because mismatch,changed to abs value because negative values were being returned
-      Serial.println("Turning right towards the center ");
-      Serial.println(angleTickCount);
+      
       turn_R_P(angleTickCount);                      
     }
     else if( rightUS[1] <= wallThreshold && i+1 != num_moves ) ////don't do it in the last iteration
     {
       delay(750);
       //too close to the wall, turn towards the center
-       Serial.println(moveDistance);
+       
       angleTickCount = abs((64687 * abs( avgWallDistance - wallThreshold )) / (moveDistance * 10000));       //added extra zero because mismatch, changed to abs value because negative values were being returned
-      Serial.print("Turning left towards the center ");
-      Serial.println(angleTickCount);
+     
       turn_L_P(angleTickCount);                    
     }
 
@@ -1316,7 +1283,7 @@ int moveDistanceWithAdjust(int distance_cms)
 		totalDistance += approxDistance;
 		approxDistance = 0;
 		angleTickCount = 0;
-		//Serial.println(totalDistance);
+		
 		delay(500); //delay to lose momentum before next move
 	}
 	
@@ -1353,5 +1320,38 @@ void dropVictim()
   delay(1000);
   manipulateGripper('O');
   delay(1000);
+}
+
+void aboutFace()
+{
+  int thresh = 40;
+  filtered_US();
+  if ((Distance_US_L < Distance_US_R) && (Distance_US_L >= thresh))
+  {
+      turn_L(TURN_LEFT_TICK);
+      delay(1000);
+      alignRobot();
+      delay(1000);
+      turn_L(TURN_LEFT_TICK);
+      delay(1000);
+  }
+  else if ((Distance_US_R < Distance_US_L) && (Distance_US_R >= thresh))
+  {
+      turn_R(TURN_RIGHT_TICK);
+      delay(1000);
+      alignRobot();
+      delay(1000);
+      turn_R(TURN_RIGHT_TICK);
+      delay(1000);
+  }
+  else
+  {
+      turn_L(TURN_LEFT_TICK);
+      delay(1000);
+      alignRobot();
+      delay(1000);
+      turn_L(TURN_LEFT_TICK);
+      delay(1000);
+  }
 }
 
