@@ -835,7 +835,7 @@ void align()
   int acquireSlow = 100;
   bool targetAcquired = false;
   int tol = 15;
-  int currentTime = millis();
+  long currentTime = millis();
   int distanceAvg_L = 0;
   int distanceAvg_R = 0;
   long smallAdj = 60;
@@ -1039,43 +1039,67 @@ int moveGridUnits(int numGrids)
 
 void filtered_US()
 {
-  int distanceAvg_L = 0;
-  int distanceAvg_R = 0;
-  int distanceUS_L[4] = {0,0,0,0};
-  int distanceUS_R[4] = {0,0,0,0};
+  long distanceAvg_L = 0;
+  long distanceAvg_R = 0;
+  long distanceUS_L[4] = {0,0,0,0};
+  long distanceUS_R[4] = {0,0,0,0};
   int i = 0;
+  int j = 0;
+  long start = millis();
+  int divL = 4;
+  int divR = 4;
    
-  while (i < 4)
+  while ((i < 4) && (j < 4))
   {
     checkSensors_US_mm();
-    if ((Distance_US_L > 0) && (Distance_US_R > 0))
+    if (Distance_US_L > 0)
     {
       distanceUS_L[i] = Distance_US_L;
-      distanceUS_R[i] = Distance_US_R;
-      i+=1;
+      i += 1;
     }
     else
     {
-      i=i-1;
+      i = (i==0) ? 0:i-1;
+    }
+    if (Distance_US_R > 0)
+    {
+      distanceUS_R[j] = Distance_US_R;
+      j += 1;
+    }
+    else 
+    {
+      j = (j==0) ? 0:j-1;
+    }
+    if ((millis() - start)>500)
+    {
+      break;
     }
   }//end while
 
   for (i = 0;i<4;i++)
   {
-    distanceAvg_L += distanceUS_L[i];
-    distanceAvg_R += distanceUS_R[i];
+    if (distanceUS_L[i] == 0)
+    {
+      divL -= 1 ;
+    }
+    else
+    {
+      distanceAvg_L += distanceUS_L[i];
+    }
+    if (distanceUS_R[i] == 0)
+    {
+      divR -= 1;
+    }
+    else
+    {
+      distanceAvg_R += distanceUS_R[i];
+    } 
   }
   
-//  for (int i = 0;i<4;i++)
-//     {
-//        checkSensors_US_mm();
-//        distanceAvg_L += Distance_US_L;
-//        distanceAvg_R += Distance_US_R;
-//        
-//     } 
-    
-  Distance_US_L = distanceAvg_L>>2;
-  Distance_US_R = distanceAvg_R>>2;
+  divL = (divL < 1) ? 1:divL;
+  divR = (divR < 1) ? 1:divR;
+  Distance_US_L = distanceAvg_L/divL;
+  Distance_US_R = distanceAvg_R/divR;
 }
 
 //Used exclusively by the go grid squares function
