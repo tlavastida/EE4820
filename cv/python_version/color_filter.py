@@ -27,8 +27,10 @@ def equalize(img):
     out = cv2.merge((b,g,r))
     return out 
 
+
+
 def filterRed(img):
-    lower = np.array([17,5,87],dtype = 'uint8')
+    lower = np.array([16,5,100],dtype = 'uint8')
     upper = np.array([75,75,255],dtype = 'uint8')
     mask = cv2.inRange(img,lower,upper)
     out = cv2.bitwise_and(img,img,mask = mask)
@@ -37,11 +39,13 @@ def filterRed(img):
 
 def filterYellow(img):
     lower = np.array([10,120,120],dtype = 'uint8')
-    upper = np.array([75,220,220],dtype = 'uint8')
+    upper = np.array([75,255,255],dtype = 'uint8')
     mask = cv2.inRange(img,lower,upper)
     out = cv2.bitwise_and(img,img,mask = mask)
     #return out
     return (mask,out)
+
+
 
 def detectColor(img):
     bright = brighten(img)
@@ -65,9 +69,12 @@ if __name__ == '__main__':
     #file1 = 'redvictim.jpg'
     #file2 = 'yellowvictim.jpg'
 
-    file1 = './imgs/red8.jpg'
+    #file1 = './imgs/red8.jpg'
     #file2 = './imgs/red5.jpg'
-    file2 = 'test.jpg'
+    #file2 = 'test.jpg'
+
+    file1 = 'red_test.jpg'
+    file2 = 'yellow_test.jpg'
     
     img1 = cv2.imread(file1)
     img1 = cv2.resize(img1,(320,240))
