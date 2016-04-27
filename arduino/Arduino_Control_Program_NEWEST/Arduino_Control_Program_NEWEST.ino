@@ -92,8 +92,8 @@ int distanceTravelled = 0;
 char cmd;
 long num = 0;
 char mod;
-const long TURN_LEFT_TICK = 950;    //902
-const long TURN_RIGHT_TICK = 761;
+const long TURN_LEFT_TICK = 895;    //950 original/tested 4/26 to tune value
+const long TURN_RIGHT_TICK = 862;   //761 original/tested 4/26 to tune value
 
 volatile bool inDanger = false;
 
@@ -137,18 +137,23 @@ void loop() {
 			//Check bottom IR sensors - for testing purposes only
           case 'I':
             checkSensors_IR_B();
-            
+            Serial.println(Distance_IR_L_B);
+            Serial.println(Distance_IR_R_B);
             taskComplete(0);
           break;
 		  //Check top IR sensors - for testing purposes only
           case 'J':
             checkSensors_IR_T();
-            
+            Serial.println(Distance_IR_L_T);
+            Serial.println(Distance_IR_R_T);
             taskComplete(0);
           break;
 		  //check US sensors - for testing purposes only
           case 'U':
             checkSensors_US();
+            Serial.println(Distance_US_L);
+            Serial.println(Distance_US_R);
+            Serial.println(Distance_US_F);
             taskComplete(0);
           break;
 		  //Manipulate gripper arm
@@ -163,13 +168,13 @@ void loop() {
                   switch(mod)
                   {
                     case 'L':
-                      turn_L(TURN_LEFT_TICK);    //  Don't mess this number up, fully charged turn (902)
-                      //turn_L_P(909);      //Testing Proportional turning
+                      //turn_L(TURN_LEFT_TICK);    //  Don't mess this number up, fully charged turn (902)
+                      turn_L_P(TURN_LEFT_TICK);      //Testing Proportional turning
                       //turn_L_P(num);
                       break;
                     case 'R':
-                      turn_R(TURN_RIGHT_TICK);    //  Don't mess this number up, fully charged turn (761)
-                      //turn_R_P(887);      //Testing Proportional turning
+                      //turn_R(TURN_RIGHT_TICK);    //  Don't mess this number up, fully charged turn (761)
+                      turn_R_P(TURN_RIGHT_TICK);      //Testing Proportional turning
                       //turn_R_P(num);
                       break;
                     default:
@@ -204,6 +209,9 @@ void loop() {
           break;
           case 'F':
             filtered_US();
+            Serial.println(Distance_US_L);
+            Serial.println(Distance_US_R);
+            Serial.println(Distance_US_F);
             taskComplete(0);
           break;
           case 'B':
