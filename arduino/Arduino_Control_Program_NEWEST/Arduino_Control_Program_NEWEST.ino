@@ -42,7 +42,7 @@ const int THRESHOLD = 5;                         //used to check if IR sensors a
 //Variables for US sensors
 long pulseWidth,cm,mm;                             
 volatile long Distance_US_L,Distance_US_R,Distance_US_F; 
-const long US_DANGER_THRESHOLD = 12;         //Volatile but treat as a constant //9
+const long US_DANGER_THRESHOLD = 14;         //Volatile but treat as a constant //9
 
 //Time delays for gripper movement
 const int TIME_DELAY = 2000;       //ms, used for delay between movements of gripper
@@ -57,7 +57,7 @@ const int GRIP_GRAB = 88;
 //const int wristDown = 150;
 const int WRIST_UP = 0;
 const int WRIST_LEVEL = 90;
-const int WRIST_PICKUP = 10;
+const int WRIST_PICKUP = 0;		//original value = 10 4/27/16
 const int WRIST_LOWER = 115;
 
 //Variables for encoders 
@@ -496,6 +496,8 @@ void alignRobot()
   int distanceAvg_L = 0;
   int distanceAvg_R = 0;
   int upperThresh = 110;
+  int lowerThresh = 45;
+  long startTime = millis();
 
   checkSensors_IR_T();
 
@@ -509,7 +511,7 @@ void alignRobot()
   distanceAvg_L = distanceAvg_L/4;
   distanceAvg_R = distanceAvg_R/4;
   
-  if (distanceAvg_L < upperThresh && distanceAvg_R < upperThresh)
+  if (distanceAvg_L < upperThresh && distanceAvg_R < upperThresh && distanceAvg_L > lowerThresh && distanceAvg_R > lowerThresh)
   {
     while (abs(Distance_IR_L_T - Distance_IR_R_T) > tol)
     {
@@ -542,6 +544,11 @@ void alignRobot()
         delay(1000);
         distanceAvg_L = 0;
         distanceAvg_R = 0;
+
+         if(millis()-startTime > 2000)
+        {
+          break;
+        }
     }//end while
   }//end if
   checkSensors_IR_T(); 
@@ -681,7 +688,7 @@ void turn_L_P(long leftTickCount)
     }
     else
     {
-      rightInput = (rightInput <= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
+      rightInput = (rightInput >= -1*SLOW) ? -1*SLOW : (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;
       //rightInput = (rightInput <= -1*topSpeed) ? -1*topSpeed : rightInput;    //original
     }
     
@@ -895,7 +902,7 @@ void align()
       //mtr_ctrl.setM2Speed(-1*(acquireSlow+LEFT_MOTOR_ADJ));
     }
     
-    if ((millis()-currentTime) >= 10000)
+    if ((millis()-currentTime) >= 5000)
     {
       break;
     } 
@@ -1221,7 +1228,7 @@ int moveDistanceWithAdjust(int distance_cms)
 		
 		delay(750);
 		
-		if( diff_L < 0 || abs(diff_R) > maxThresh && abs(diff_L) > 150 ) //use the left side //changed 15 to 150
+		if( diff_L < 0 && Distance_US_L < 300 || abs(diff_R) > maxThresh && abs(diff_L) > 150 ) //use the left side //changed 15 to 150
 		{
 			//compute angle to adjust by
 			angleTickCount =  (64687 * abs( diff_L )) / (legDistance * 1000);            
@@ -1244,7 +1251,7 @@ int moveDistanceWithAdjust(int distance_cms)
 			approxDistance = sqrt( legDistance * legDistance - (diff_L * diff_L) / 100 );  //because legDistance is in cms and diff_L is in mms
 			
 		}
-		else if( diff_R < 0 || abs(diff_L) > maxThresh && abs(diff_R) > 150 ) //use the right side    //added in abs(diff_R)>150
+		else if( diff_R < 0 && Distance_US_R < 300 || abs(diff_L) > maxThresh && abs(diff_R) > 150 ) //use the right side    //added in abs(diff_R)>150
 		{
 			//compute angle to adjust by
 			angleTickCount = (64687 * abs( diff_R )) / (legDistance * 1000);       
@@ -1356,34 +1363,34 @@ void dropVictim()
 
 void aboutFace()
 {
-  int thresh = 40;
+  int thresh = 55; //original value = 40 4/27/16
   filtered_US();
-  if ((Distance_US_L < Distance_US_R) && (Distance_US_L >= thresh))
+  if ((Distance_US_L < Distance_US_R))// && (Distance_US_L >= thresh))
   {
       turn_L(TURN_LEFT_TICK);
-      delay(1000);
+      delay(1200);
       alignRobot();
-      delay(1000);
+      delay(1200);
       turn_L(TURN_LEFT_TICK);
-      delay(1000);
+      delay(1200);
   }
-  else if ((Distance_US_R < Distance_US_L) && (Distance_US_R >= thresh))
+  else if ((Distance_US_R < Distance_US_L))// && (Distance_US_R >= thresh))
   {
       turn_R(TURN_RIGHT_TICK);
-      delay(1000);
+      delay(1200);
       alignRobot();
-      delay(1000);
+      delay(1200);
       turn_R(TURN_RIGHT_TICK);
-      delay(1000);
+      delay(1200);
   }
   else
   {
       turn_L(TURN_LEFT_TICK);
-      delay(1000);
+      delay(1200);
       alignRobot();
-      delay(1000);
+      delay(1200);
       turn_L(TURN_LEFT_TICK);
-      delay(1000);
+      delay(1200);
   }
 }
 
