@@ -92,8 +92,8 @@ int distanceTravelled = 0;
 char cmd;
 long num = 0;
 char mod;
-const long TURN_LEFT_TICK = 895;    //950 original/tested 4/26 to tune value
-const long TURN_RIGHT_TICK = 862;   //761 original/tested 4/26 to tune value
+const long TURN_LEFT_TICK = 910;    //950 original/tested 4/26 to tune value (( 895)) with dirty course
+const long TURN_RIGHT_TICK = 873;   //761 original/tested 4/26 to tune value ((862)) with dirty course
 
 volatile bool inDanger = false;
 
