@@ -934,7 +934,7 @@ void align()
       //mtr_ctrl.setM2Speed(-1*(acquireSlow+LEFT_MOTOR_ADJ));
     }
     
-    if ((millis()-currentTime) >= 10000)
+    if ((millis()-currentTime) >= 5000)
     {
       break;
     } 
